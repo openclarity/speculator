@@ -17,7 +17,7 @@ build_cli:
 
 .PHONY: test
 test:
-	$(GOTEST) -v `go list ./pkg/...` -coverprofile=coverage.out
+	$(GOTEST) `go list ./pkg/...` -coverprofile=coverage.out
 	# go tool cover -html=coverage.out
 
 clean:
