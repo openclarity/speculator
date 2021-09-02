@@ -1,0 +1,20 @@
+{
+ "request_id": "req-id",
+ "scheme": "http",
+ "scnt_request": {
+  "method": "GET",
+  "path": "/some/path",
+  "host": "www.example2.com",
+  "version": "1",
+  "headers": null,
+  "body": "eyJhY3RpdmUiOnRydWUsCiJjZXJ0aWZpY2F0ZVZlcnNpb24iOiI4NmViNTI3OC02NzZhLTNiN2MtYjI5ZC00YTU3MDA3ZGM3YmUiLAoiY29udHJvbGxlckluc3RhbmNlSW5mbyI6eyJyZXBsaWNhSWQiOiJwb3J0c2hpZnQtYWdlbnQtNjZmYzc3Yzg0OC10bW1rOCJ9LAoicG9saWN5QW5kQXBwVmVyc2lvbiI6MTYyMTQ3NzkwMDM2MSwKInZlcnNpb24iOiIxLjE0Ny4xIn0=",
+  "truncated_body": false
+ },
+ "scnt_response": {
+  "status_code": "200",
+  "version": "1",
+  "headers": null,
+  "body": "eyJjdnNzIjpbeyJzY29yZSI6Ny44LCJ2ZWN0b3IiOiJBVjpML0FDOkwvUFI6Ti9VSTpSL1M6VS9DOkgvSTpIL0E6SCJ9XX0=",
+  "truncated_body": false
+ }
+}

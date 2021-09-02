@@ -1,0 +1,74 @@
+{
+  "request_id": "fcfa33bd-ae9f-409e-9369-2d4fde6d4e9b",
+  "scheme": "",
+  "scnt_request": {
+    "method": "POST",
+    "path": "/anything",
+    "host": "httpbin.com",
+    "version": "",
+    "headers": [
+      [
+        "user-agent",
+        "curl/7.35.0"
+      ],
+      [
+        "accept",
+        "application/json"
+      ],
+      [
+        "content-length",
+        "34"
+      ],
+      [
+        "content-type",
+        "application/x-www-form-urlencoded"
+      ],
+      [
+        "x-forwarded-proto",
+        "http"
+      ],
+      [
+        "x-request-id",
+        "fcfa33bd-ae9f-409e-9369-2d4fde6d4e9b"
+      ]
+    ],
+    "body": "eyJrZXkxIjoidmFsdWUxIiwgImtleTIiOiJ2YWx1ZTIifQ==",
+    "truncated_body": false
+  },
+  "scnt_response": {
+    "status_code": "200",
+    "version": "",
+    "headers": [
+      [
+        "date",
+        "Mon, 19 Jul 2021 13:07:17 GMT"
+      ],
+      [
+        "content-type",
+        "application/json"
+      ],
+      [
+        "content-length",
+        "2503"
+      ],
+      [
+        "connection",
+        "keep-alive"
+      ],
+      [
+        "server",
+        "gunicorn/19.9.0"
+      ],
+      [
+        "access-control-allow-origin",
+        "*"
+      ],
+      [
+        "access-control-allow-credentials",
+        "true"
+      ]
+    ],
+    "body": "",
+    "truncated_body": false
+  }
+}

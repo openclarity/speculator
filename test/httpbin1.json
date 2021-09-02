@@ -1,0 +1,67 @@
+{
+    "request_id": "3a9d0e4b-90cd-4041-a696-c0250d7e38ca",
+    "scheme": "",
+    "destination_address": "10.11.12.13:80",
+    "scnt_request": {
+        "method": "GET",
+        "path": "/base64/aGVsbG8K",
+        "host": "httpbin.com",
+        "version": "",
+        "headers": [
+            [
+                "user-agent",
+                "curl/7.35.0"
+            ],
+            [
+                "accept",
+                "application/json"
+            ],
+            [
+                "x-forwarded-proto",
+                "http"
+            ],
+            [
+                "x-request-id",
+                "3a9d0e4b-90cd-4041-a696-c0250d7e38ca"
+            ]
+        ],
+        "body": "",
+        "truncated_body": false
+    },
+    "scnt_response": {
+        "status_code": "200",
+        "version": "",
+        "headers": [
+            [
+                "date",
+                "Sun, 18 Jul 2021 11:21:29 GMT"
+            ],
+            [
+                "content-type",
+                "text/html; charset=utf-8"
+            ],
+            [
+                "content-length",
+                "6"
+            ],
+            [
+                "connection",
+                "keep-alive"
+            ],
+            [
+                "server",
+                "gunicorn/19.9.0"
+            ],
+            [
+                "access-control-allow-origin",
+                "*"
+            ],
+            [
+                "access-control-allow-credentials",
+                "true"
+            ]
+        ],
+        "body": "aGVsbG8K",
+        "truncated_body": false
+    }
+}

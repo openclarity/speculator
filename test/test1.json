@@ -1,0 +1,20 @@
+{
+ "request_id": "req-id",
+ "scheme": "http",
+ "scnt_request": {
+  "method": "GET",
+  "path": "/some/path",
+  "host": "www.example.com",
+  "version": "1",
+  "headers": null,
+  "body": "eyJhY3RpdmUiOnRydWUsInN0YXR1c0NvZGVzIjpbIk5PX01FVFJJQ1NfU0VSVkVSIl0sInZlcnNpb24iOiIxLjE0Ny4xIn0=",
+  "truncated_body": false
+ },
+ "scnt_response": {
+  "status_code": "200",
+  "version": "1",
+  "headers": null,
+  "body": "eyJjdnNzIjpbeyJzY29yZSI6Ny44LCJ2ZWN0b3IiOiJBVjpML0FDOkwvUFI6Ti9VSTpSL1M6VS9DOkgvSTpIL0E6SCIsInZlcnNpb24iOiIzIn1dfQ==",
+  "truncated_body": false
+ }
+}
