@@ -31,7 +31,7 @@ const (
 	maxSchemaToRefDepth  = 20
 )
 
-// will return a map of definitions and update the operation accordingly
+// will return a map of definitions and update the operation accordingly.
 func updateDefinitions(definitions map[string]spec.Schema, op *spec.Operation) (retDefinitions map[string]spec.Schema, retOperation *spec.Operation) {
 	if op == nil {
 		return definitions, op
@@ -83,8 +83,9 @@ func schemaToRef(definitions map[string]spec.Schema, schema *spec.Schema, defNam
 
 	// go over all properties in the object and convert each one to ref if needed
 	var propNames []string
-	for propName, propSchema := range schema.Properties {
+	for propName := range schema.Properties {
 		var newSchema *spec.Schema
+		propSchema := schema.Properties[propName]
 		definitions, newSchema = schemaToRef(definitions, &propSchema, propName, depth+1)
 		schema.Properties[propName] = *newSchema
 		propNames = append(propNames, propName)
@@ -133,7 +134,7 @@ func getUniqueDefName(definitions map[string]spec.Schema, name string) string {
 	}
 }
 
-// will look for identical schema definition in definitions map
+// will look for identical schema definition in definitions map.
 func findDefinition(definitions map[string]spec.Schema, schema *spec.Schema) (defName string, exist bool) {
 	schemaBytes, _ := json.Marshal(schema)
 	differ := gojsondiff.New()
@@ -144,7 +145,7 @@ func findDefinition(definitions map[string]spec.Schema, schema *spec.Schema) (de
 			log.Errorf("Failed to compare schemas: %v", err)
 			continue
 		}
-		if diff.Modified() == false {
+		if !diff.Modified() {
 			log.Debugf("Schema was found in definitions. schema=%+v, def name=%v", schema, name)
 			return name, true
 		}

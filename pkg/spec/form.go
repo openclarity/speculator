@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	// taken from net/http/request.go
+	// taken from net/http/request.go.
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
 
@@ -57,7 +57,7 @@ func addMultipartFormDataParams(operation *spec.Operation, body string, mediaTyp
 
 	form, err := multipart.NewReader(strings.NewReader(body), boundary).ReadForm(defaultMaxMemory)
 	if err != nil {
-		return operation, fmt.Errorf("failed to read form: %v", err)
+		return operation, fmt.Errorf("failed to read form: %w", err)
 	}
 
 	// add file formData

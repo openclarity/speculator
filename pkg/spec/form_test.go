@@ -83,7 +83,7 @@ func Test_addApplicationFormParams(t *testing.T) {
 			},
 			want: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, []string{}...),
 			want1: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 		},
 	}

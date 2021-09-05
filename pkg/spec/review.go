@@ -18,11 +18,10 @@ package spec
 import (
 	"strings"
 
+	oapi_spec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/apiclarity/speculator/pkg/utils"
-
-	oapi_spec "github.com/go-openapi/spec"
 )
 
 type SuggestedSpecReview struct {
@@ -51,12 +50,12 @@ type ReviewPathItem struct {
 	Paths map[string]bool
 }
 
-// this function should group all paths that have suspect parameter (with a certain template), into one path which is parameterized, and then add this path params to the spec
+// this function should group all paths that have suspect parameter (with a certain template), into one path which is parameterized, and then add this path params to the spec.
 func (s *Spec) CreateSuggestedReview() *SuggestedSpecReview {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	var ret = &SuggestedSpecReview{
+	ret := &SuggestedSpecReview{
 		PathToPathItem: s.LearningSpec.PathItems,
 	}
 

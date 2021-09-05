@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package path_trie
+package pathtrie
 
 import (
 	"encoding/json"
@@ -38,15 +38,15 @@ func TestPathTrie_getNode(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *PathTrieNode
+		want *TrieNode
 	}{
 		{
 			name: "most accurate match - will match both `/api/{param1}/items` and `/api/{param1}/{param2}`",
 			args: args{
 				path: "/api/1/items",
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "items",
 				FullPath:         "/api/{param1}/items",
 				PathParamCounter: 1,
@@ -58,8 +58,8 @@ func TestPathTrie_getNode(t *testing.T) {
 			args: args{
 				path: "/api/{param1}/items",
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "items",
 				FullPath:         "/api/{param1}/items",
 				PathParamCounter: 1,
@@ -71,10 +71,10 @@ func TestPathTrie_getNode(t *testing.T) {
 			args: args{
 				path: "/api/items",
 			},
-			want: &PathTrieNode{
-				Children: map[string]*PathTrieNode{
+			want: &TrieNode{
+				Children: map[string]*TrieNode{
 					"cat": {
-						Children:         make(PathTrieMap, 0),
+						Children:         make(PathToTrieNode),
 						Name:             "cat",
 						FullPath:         "/api/items/cat",
 						PathParamCounter: 0,
@@ -92,8 +92,8 @@ func TestPathTrie_getNode(t *testing.T) {
 			args: args{
 				path: "/api/1/2",
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "{param2}",
 				FullPath:         "/api/{param1}/{param2}",
 				PathParamCounter: 2,
@@ -105,8 +105,8 @@ func TestPathTrie_getNode(t *testing.T) {
 			args: args{
 				path: "/api/1/cat",
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "cat",
 				FullPath:         "/api/{param1}/cat",
 				PathParamCounter: 1,
@@ -118,8 +118,8 @@ func TestPathTrie_getNode(t *testing.T) {
 			args: args{
 				path: "/api/items/cat",
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "cat",
 				FullPath:         "/api/items/cat",
 				PathParamCounter: 0,
@@ -233,26 +233,26 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 	}
 	tests := []struct {
 		name string
-		trie PathTrieMap
+		trie PathToTrieNode
 		args args
-		want []*PathTrieNode
+		want []*TrieNode
 	}{
 		{
 			name: "return 2 matches nodes",
-			trie: map[string]*PathTrieNode{
+			trie: map[string]*TrieNode{
 				"api": {
-					Children: map[string]*PathTrieNode{
+					Children: map[string]*TrieNode{
 						"{param1}": {
-							Children: map[string]*PathTrieNode{
+							Children: map[string]*TrieNode{
 								"test": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "test",
 									FullPath:         "/api/{param1}/test",
 									PathParamCounter: 1,
 									Value:            1,
 								},
 								"{param2}": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "{param2}",
 									FullPath:         "/api/{param1}/{param2}",
 									PathParamCounter: 2,
@@ -272,16 +272,16 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 				segments: []string{"api", "123", "test"},
 				idx:      0,
 			},
-			want: []*PathTrieNode{
+			want: []*TrieNode{
 				{
-					Children:         make(PathTrieMap, 0),
+					Children:         make(PathToTrieNode),
 					Name:             "test",
 					FullPath:         "/api/{param1}/test",
 					PathParamCounter: 1,
 					Value:            1,
 				},
 				{
-					Children:         make(PathTrieMap, 0),
+					Children:         make(PathToTrieNode),
 					Name:             "{param2}",
 					FullPath:         "/api/{param1}/{param2}",
 					PathParamCounter: 2,
@@ -291,15 +291,15 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 		},
 		{
 			name: "last path segment has nil value - return only 1 matches nodes (/api/{param1}/{param2})",
-			trie: map[string]*PathTrieNode{
+			trie: map[string]*TrieNode{
 				"api": {
-					Children: map[string]*PathTrieNode{
+					Children: map[string]*TrieNode{
 						"{param1}": {
-							Children: map[string]*PathTrieNode{
+							Children: map[string]*TrieNode{
 								"test": {
-									Children: map[string]*PathTrieNode{
+									Children: map[string]*TrieNode{
 										"cats": {
-											Children:         make(PathTrieMap, 0),
+											Children:         make(PathToTrieNode),
 											Name:             "cats",
 											FullPath:         "/api/{param1}/test/cats",
 											PathParamCounter: 1,
@@ -312,7 +312,7 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 									Value:            nil,
 								},
 								"{param2}": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "{param2}",
 									FullPath:         "/api/{param1}/{param2}",
 									PathParamCounter: 2,
@@ -332,9 +332,9 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 				segments: []string{"api", "123", "test"},
 				idx:      0,
 			},
-			want: []*PathTrieNode{
+			want: []*TrieNode{
 				{
-					Children:         make(PathTrieMap, 0),
+					Children:         make(PathToTrieNode),
 					Name:             "{param2}",
 					FullPath:         "/api/{param1}/{param2}",
 					PathParamCounter: 2,
@@ -344,20 +344,20 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 		},
 		{
 			name: "0 nodes match",
-			trie: map[string]*PathTrieNode{
+			trie: map[string]*TrieNode{
 				"api": {
-					Children: map[string]*PathTrieNode{
+					Children: map[string]*TrieNode{
 						"{param1}": {
-							Children: map[string]*PathTrieNode{
+							Children: map[string]*TrieNode{
 								"test": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "test",
 									FullPath:         "/api/{param1}/test",
 									PathParamCounter: 1,
 									Value:            1,
 								},
 								"{param2}": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "{param2}",
 									FullPath:         "/api/{param1}/{param2}",
 									PathParamCounter: 2,
@@ -400,19 +400,19 @@ func TestPathTrieMap_getMatchNodes(t *testing.T) {
 func Test_getMostAccurateNode(t *testing.T) {
 	pt := New()
 	type args struct {
-		nodes       []*PathTrieNode
+		nodes       []*TrieNode
 		path        string
 		segmentsLen int
 	}
 	tests := []struct {
 		name string
 		args args
-		want *PathTrieNode
+		want *TrieNode
 	}{
 		{
 			name: "exact prefix match",
 			args: args{
-				nodes: []*PathTrieNode{
+				nodes: []*TrieNode{
 					pt.createPathTrieNode([]string{"", "api", "{param1}", "test"}, 3, true, 1),
 					pt.createPathTrieNode([]string{"", "api", "{param1}", "{param2}"}, 3, true, 2),
 				},
@@ -424,7 +424,7 @@ func Test_getMostAccurateNode(t *testing.T) {
 		{
 			name: "less path params match",
 			args: args{
-				nodes: []*PathTrieNode{
+				nodes: []*TrieNode{
 					pt.createPathTrieNode([]string{"", "api", "{param1}", "test", "{param2}"}, 4, true, 1),
 					pt.createPathTrieNode([]string{"", "api", "{param1}", "{param2}", "{param3}"}, 4, true, 2),
 				},
@@ -436,7 +436,7 @@ func Test_getMostAccurateNode(t *testing.T) {
 		{
 			name: "single match",
 			args: args{
-				nodes: []*PathTrieNode{
+				nodes: []*TrieNode{
 					pt.createPathTrieNode([]string{"", "api", "{param1}", "test"}, 3, true, 1),
 				},
 				path:        "/api/cats/test",
@@ -500,7 +500,7 @@ func TestPathTrieNode_isNameMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := &PathTrieNode{
+			node := &TrieNode{
 				Name: tt.fields.Name,
 			}
 			if got := node.isNameMatch(tt.args.segment); got != tt.want {
@@ -546,7 +546,7 @@ func TestPathTrieNode_isFullPathMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := &PathTrieNode{
+			node := &TrieNode{
 				FullPath: tt.fields.Prefix,
 			}
 			if got := node.isFullPathMatch(tt.args.path); got != tt.want {
@@ -606,7 +606,7 @@ func TestPathTrie_createPathTrieNode(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *PathTrieNode
+		want *TrieNode
 	}{
 		{
 			name: "last segment with 1 path param",
@@ -616,8 +616,8 @@ func TestPathTrie_createPathTrieNode(t *testing.T) {
 				isLastSegment: true,
 				val:           1,
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "{param}",
 				FullPath:         "/api/{param}",
 				PathParamCounter: 1,
@@ -632,8 +632,8 @@ func TestPathTrie_createPathTrieNode(t *testing.T) {
 				isLastSegment: false,
 				val:           1,
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "{param3}",
 				FullPath:         "/api/{param1}/{param2}/{param3}",
 				PathParamCounter: 3,
@@ -648,8 +648,8 @@ func TestPathTrie_createPathTrieNode(t *testing.T) {
 				isLastSegment: false,
 				val:           1,
 			},
-			want: &PathTrieNode{
-				Children:         make(PathTrieMap, 0),
+			want: &TrieNode{
+				Children:         make(PathToTrieNode),
 				Name:             "api",
 				FullPath:         "/api",
 				PathParamCounter: 0,
@@ -668,14 +668,14 @@ func TestPathTrie_createPathTrieNode(t *testing.T) {
 }
 
 func TestPathTrie_InsertMerge(t *testing.T) {
-	swapMerge := func(existing, new *interface{}) {
-		*existing = *new
+	swapMerge := func(existing, newV *interface{}) {
+		*existing = *newV
 	}
-	shouldNotBeCalledMergeFunc := func(existing, new *interface{}) {
-		panic(fmt.Sprintf("merge should not be called. existing=%+v, new=%+v", *existing, *new))
+	shouldNotBeCalledMergeFunc := func(existing, newV *interface{}) {
+		panic(fmt.Sprintf("merge should not be called. existing=%+v, newV=%+v", *existing, *newV))
 	}
 	type fields struct {
-		Trie          PathTrieMap
+		Trie          PathToTrieNode
 		PathSeparator string
 	}
 	type args struct {
@@ -688,12 +688,12 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 		fields        fields
 		args          args
 		wantIsNewNode bool
-		expectedTrie  PathTrieMap
+		expectedTrie  PathToTrieNode
 	}{
 		{
 			name: "new node",
 			fields: fields{
-				Trie:          PathTrieMap{},
+				Trie:          PathToTrieNode{},
 				PathSeparator: "/",
 			},
 			args: args{
@@ -702,11 +702,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				merge: shouldNotBeCalledMergeFunc,
 			},
 			wantIsNewNode: true,
-			expectedTrie: PathTrieMap{
-				"": &PathTrieNode{
-					Children: map[string]*PathTrieNode{
+			expectedTrie: PathToTrieNode{
+				"": &TrieNode{
+					Children: map[string]*TrieNode{
 						"api": {
-							Children:         make(PathTrieMap, 0),
+							Children:         make(PathToTrieNode),
 							Name:             "api",
 							FullPath:         "/api",
 							PathParamCounter: 0,
@@ -723,11 +723,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 		{
 			name: "existing node",
 			fields: fields{
-				Trie: PathTrieMap{
-					"": &PathTrieNode{
-						Children: map[string]*PathTrieNode{
+				Trie: PathToTrieNode{
+					"": &TrieNode{
+						Children: map[string]*TrieNode{
 							"api": {
-								Children:         make(PathTrieMap, 0),
+								Children:         make(PathToTrieNode),
 								Name:             "api",
 								FullPath:         "/api",
 								PathParamCounter: 0,
@@ -748,11 +748,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				merge: swapMerge,
 			},
 			wantIsNewNode: false,
-			expectedTrie: PathTrieMap{
-				"": &PathTrieNode{
-					Children: map[string]*PathTrieNode{
+			expectedTrie: PathToTrieNode{
+				"": &TrieNode{
+					Children: map[string]*TrieNode{
 						"api": {
-							Children:         make(PathTrieMap, 0),
+							Children:         make(PathToTrieNode),
 							Name:             "api",
 							FullPath:         "/api",
 							PathParamCounter: 0,
@@ -769,11 +769,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 		{
 			name: "path with separator at the end - expected new node",
 			fields: fields{
-				Trie: PathTrieMap{
-					"": &PathTrieNode{
-						Children: map[string]*PathTrieNode{
+				Trie: PathToTrieNode{
+					"": &TrieNode{
+						Children: map[string]*TrieNode{
 							"api": {
-								Children:         make(PathTrieMap, 0),
+								Children:         make(PathToTrieNode),
 								Name:             "api",
 								FullPath:         "/api",
 								PathParamCounter: 0,
@@ -794,13 +794,13 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				merge: shouldNotBeCalledMergeFunc,
 			},
 			wantIsNewNode: true,
-			expectedTrie: PathTrieMap{
-				"": &PathTrieNode{
-					Children: map[string]*PathTrieNode{
+			expectedTrie: PathToTrieNode{
+				"": &TrieNode{
+					Children: map[string]*TrieNode{
 						"api": {
-							Children: map[string]*PathTrieNode{
+							Children: map[string]*TrieNode{
 								"": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "",
 									FullPath:         "/api/",
 									PathParamCounter: 0,
@@ -823,11 +823,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 		{
 			name: "path param addition",
 			fields: fields{
-				Trie: PathTrieMap{
-					"": &PathTrieNode{
-						Children: map[string]*PathTrieNode{
+				Trie: PathToTrieNode{
+					"": &TrieNode{
+						Children: map[string]*TrieNode{
 							"api": {
-								Children:         make(PathTrieMap, 0),
+								Children:         make(PathToTrieNode),
 								Name:             "api",
 								FullPath:         "/api",
 								PathParamCounter: 0,
@@ -848,13 +848,13 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				merge: swapMerge,
 			},
 			wantIsNewNode: true,
-			expectedTrie: PathTrieMap{
-				"": &PathTrieNode{
-					Children: map[string]*PathTrieNode{
+			expectedTrie: PathToTrieNode{
+				"": &TrieNode{
+					Children: map[string]*TrieNode{
 						"api": {
-							Children: map[string]*PathTrieNode{
+							Children: map[string]*TrieNode{
 								"{param}": {
-									Children:         make(PathTrieMap, 0),
+									Children:         make(PathToTrieNode),
 									Name:             "{param}",
 									FullPath:         "/api/{param}",
 									PathParamCounter: 1,

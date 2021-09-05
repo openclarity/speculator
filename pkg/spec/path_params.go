@@ -66,7 +66,7 @@ const (
 )
 
 // /api/1/foo, api/2/foo and index 1 will return:
-// []string{1, 2}
+// []string{1, 2}.
 func getOnlyIndexedPartFromPaths(paths map[string]bool, i int) []string {
 	var ret []string
 	for path := range paths {
@@ -81,9 +81,9 @@ func getOnlyIndexedPartFromPaths(paths map[string]bool, i int) []string {
 }
 
 // If all params in paramList can be guessed as same type and format, this type and format will be returned, otherwise,
-// if there are couple of formats, type string and no format will be return
+// if there are couple of formats, type string and no format will be return.
 func getParamTypeAndFormat(paramsList []string) (string, string) {
-	var parameterFormat = paramFormatUnset
+	parameterFormat := paramFormatUnset
 
 	for _, pathPart := range paramsList {
 		if isNumber(pathPart) {
@@ -148,11 +148,14 @@ func isUUID(pathPart string) bool {
 // Check if a path part that is mixed from digits and chars can be considered as parameter following hard-coded heuristics.
 // Temporary, we'll consider strings as parameters that are at least 8 chars longs and has at least 3 digits.
 func isMixed(pathPart string) bool {
-	if len(pathPart) < 8 {
+	const maxLen = 8
+	const minDigitsLen = 2
+
+	if len(pathPart) < maxLen {
 		return false
 	}
 
-	return countDigitsInString(pathPart) > 2
+	return countDigitsInString(pathPart) > minDigitsLen
 }
 
 func countDigitsInString(s string) int {

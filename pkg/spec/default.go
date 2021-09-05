@@ -18,7 +18,7 @@ package spec
 import (
 	"github.com/go-openapi/spec"
 
-	"github.com/apiclarity/speculator/pkg/path_trie"
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 func CreateDefaultSpec(host string, port string) *Spec {
@@ -33,7 +33,7 @@ func CreateDefaultSpec(host string, port string) *Spec {
 			PathItems:           map[string]*spec.PathItem{},
 			SecurityDefinitions: map[string]*spec.SecurityScheme{},
 		},
-		PathTrie: path_trie.New(),
+		PathTrie: pathtrie.New(),
 	}
 }
 

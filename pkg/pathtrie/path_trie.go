@@ -14,7 +14,7 @@
 // limitations under the License.
 
 // Inspired by https://github.com/akitasoftware/akita-libs/blob/main/path_trie/path_trie.go
-package path_trie
+package pathtrie
 
 import (
 	"strings"
@@ -22,8 +22,8 @@ import (
 	"github.com/apiclarity/speculator/pkg/utils"
 )
 
-type PathTrieNode struct {
-	Children PathTrieMap
+type TrieNode struct {
+	Children PathToTrieNode
 
 	// Name of the path segment corresponding to this node.
 	// E.g. if this node represents /v1/foo/bar,
@@ -40,14 +40,14 @@ type PathTrieNode struct {
 	Value interface{}
 }
 
-type PathTrieMap map[string]*PathTrieNode
+type PathToTrieNode map[string]*TrieNode
 
 type PathTrie struct {
-	Trie          PathTrieMap
+	Trie          PathToTrieNode
 	PathSeparator string
 }
 
-type ValueMergeFunc func(existing, new *interface{})
+type ValueMergeFunc func(existing, newV *interface{})
 
 // Create a PathTrie with "/" as the path separator.
 func New() PathTrie {
@@ -57,7 +57,7 @@ func New() PathTrie {
 // Create a PathTrie with a user-supplied path separator.
 func NewWithPathSeparator(pathSeparator string) PathTrie {
 	return PathTrie{
-		Trie:          make(PathTrieMap, 0),
+		Trie:          make(PathToTrieNode),
 		PathSeparator: pathSeparator,
 	}
 }
@@ -67,8 +67,8 @@ func NewWithPathSeparator(pathSeparator string) PathTrie {
 // was overwritten.
 //
 func (pt *PathTrie) Insert(path string, val interface{}) bool {
-	return pt.InsertMerge(path, val, func(existing, new *interface{}) {
-		*existing = *new
+	return pt.InsertMerge(path, val, func(existing, newV *interface{}) {
+		*existing = *newV
 	})
 }
 
@@ -106,10 +106,10 @@ func (pt *PathTrie) InsertMerge(path string, val interface{}, merge ValueMergeFu
 	return isNewNode
 }
 
-func (pt *PathTrie) createPathTrieNode(segments []string, idx int, isLastSegment bool, val interface{}) *PathTrieNode {
+func (pt *PathTrie) createPathTrieNode(segments []string, idx int, isLastSegment bool, val interface{}) *TrieNode {
 	fullPathSegments := segments[:idx+1]
-	node := &PathTrieNode{
-		Children: make(PathTrieMap, 0),
+	node := &TrieNode{
+		Children: make(PathToTrieNode),
 		Name:     segments[idx],
 		FullPath: strings.Join(fullPathSegments, pt.PathSeparator),
 	}
@@ -133,7 +133,7 @@ func countPathParam(segments []string) int {
 	return count
 }
 
-// GetValue returns the given node path value, nil if node is not found
+// GetValue returns the given node path value, nil if node is not found.
 func (pt *PathTrie) GetValue(path string) interface{} {
 	node := pt.getNode(path)
 	if node == nil {
@@ -143,7 +143,7 @@ func (pt *PathTrie) GetValue(path string) interface{} {
 	return node.Value
 }
 
-// GetPathAndValue returns the given node full path and value, nil if node is not found
+// GetPathAndValue returns the given node full path and value, nil if node is not found.
 func (pt *PathTrie) GetPathAndValue(path string) (string, interface{}, bool) {
 	node := pt.getNode(path)
 	if node == nil {
@@ -153,7 +153,7 @@ func (pt *PathTrie) GetPathAndValue(path string) (string, interface{}, bool) {
 	return node.FullPath, node.Value, true
 }
 
-func (pt *PathTrie) getNode(path string) *PathTrieNode {
+func (pt *PathTrie) getNode(path string) *TrieNode {
 	segments := strings.Split(path, pt.PathSeparator)
 
 	nodes := pt.Trie.getMatchNodes(segments, 0)
@@ -170,8 +170,8 @@ func (pt *PathTrie) getNode(path string) *PathTrieNode {
 	return getMostAccurateNode(nodes, path, len(segments))
 }
 
-func (trie PathTrieMap) getMatchNodes(segments []string, idx int) []*PathTrieNode {
-	var nodes []*PathTrieNode
+func (trie PathToTrieNode) getMatchNodes(segments []string, idx int) []*TrieNode {
+	var nodes []*TrieNode
 
 	isLastSegment := idx == len(segments)-1
 
@@ -199,9 +199,9 @@ func (trie PathTrieMap) getMatchNodes(segments []string, idx int) []*PathTrieNod
 	return nodes
 }
 
-// getMostAccurateNode returns the node with less path params segments
-func getMostAccurateNode(nodes []*PathTrieNode, path string, segmentsLen int) *PathTrieNode {
-	var retNode *PathTrieNode
+// getMostAccurateNode returns the node with less path params segments.
+func getMostAccurateNode(nodes []*TrieNode, path string, segmentsLen int) *TrieNode {
+	var retNode *TrieNode
 	minPathParamSegmentsCount := segmentsLen + 1
 
 	for _, node := range nodes {
@@ -221,7 +221,7 @@ func getMostAccurateNode(nodes []*PathTrieNode, path string, segmentsLen int) *P
 	return retNode
 }
 
-func (node *PathTrieNode) isNameMatch(segment string) bool {
+func (node *TrieNode) isNameMatch(segment string) bool {
 	if utils.IsPathParam(node.Name) {
 		return true
 	}
@@ -233,10 +233,6 @@ func (node *PathTrieNode) isNameMatch(segment string) bool {
 	return false
 }
 
-func (node *PathTrieNode) isFullPathMatch(path string) bool {
-	if node.FullPath == path {
-		return true
-	}
-
-	return false
+func (node *TrieNode) isFullPathMatch(path string) bool {
+	return node.FullPath == path
 }

@@ -20,9 +20,8 @@ import (
 	"reflect"
 	"testing"
 
-	"gotest.tools/assert"
-
 	oapi_spec "github.com/go-openapi/spec"
+	"gotest.tools/assert"
 )
 
 func TestSpec_LoadProvidedSpec(t *testing.T) {

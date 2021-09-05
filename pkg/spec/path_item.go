@@ -88,5 +88,4 @@ func AddOperationToPathItem(item *oapi_spec.PathItem, method string, operation *
 	case http.MethodPut:
 		item.Put = operation
 	}
-	return
 }

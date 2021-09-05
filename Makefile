@@ -9,7 +9,7 @@ SHELL=/bin/bash
 CLI_BINARY_NAME=cli
 
 # Dependency versions
-GOLANGCI_VERSION = 1.38.0
+GOLANGCI_VERSION = 1.42.0
 LICENSEI_VERSION = 0.3.1
 
 # HELP
