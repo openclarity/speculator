@@ -2318,7 +2318,12 @@ func Test_mergeOperationSecurity(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := mergeOperationSecurity(tt.args.security, tt.args.security2); !reflect.DeepEqual(got, tt.want) {
+			got := mergeOperationSecurity(tt.args.security, tt.args.security2)
+			sort.Slice(got, func(i, j int) bool {
+				_, ok := got[i]["key1"]
+				return ok
+			})
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeOperationSecurity() = %v, want %v", got, tt.want)
 			}
 		})
