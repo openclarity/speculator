@@ -35,7 +35,7 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 		return fmt.Errorf("failed to convert provided spec into json: %s. %v", providedSpec, err)
 	}
 
-	if err := validateRawJsonSpec(jsonSpec); err != nil {
+	if err := validateRawJSONSpec(jsonSpec); err != nil {
 		return fmt.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
 	}
 	s.ProvidedSpec = &ProvidedSpec{
@@ -48,5 +48,9 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 		},
 	}
 
-	return json.Unmarshal(jsonSpec, s.ProvidedSpec.Spec)
+	if err := json.Unmarshal(jsonSpec, s.ProvidedSpec.Spec); err != nil {
+		return fmt.Errorf("failed to unmarshal spec: %v", err)
+	}
+
+	return nil
 }

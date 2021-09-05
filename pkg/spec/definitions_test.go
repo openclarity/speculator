@@ -602,10 +602,10 @@ var interaction = &HTTPInteractionData{
 	ReqBody:  interactionReqBody,
 	RespBody: interactionRespBody,
 	ReqHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	RespHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
 }

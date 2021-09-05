@@ -16,14 +16,13 @@
 package spec
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"github.com/go-openapi/spec"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
 	BasicAuthSecurityDefinitionKey  = "BasicAuth"
-	ApiKeyAuthSecurityDefinitionKey = "ApiKeyAuth"
+	APIKeyAuthSecurityDefinitionKey = "ApiKeyAuth"
 	OAuth2SecurityDefinitionKey     = "OAuth2"
 
 	BearerAuthPrefix = "Bearer "
@@ -31,7 +30,7 @@ const (
 
 	AccessTokenParamKey = "access_token"
 
-	tokenURL         = "https://example.com/oauth/token"
+	tknURL           = "https://example.com/oauth/token"
 	authorizationURL = "https://example.com/oauth/authorize"
 )
 
@@ -56,9 +55,9 @@ func updateSecurityDefinitions(sd spec.SecurityDefinitions, sdKey string) spec.S
 		sd[BasicAuthSecurityDefinitionKey] = spec.BasicAuth()
 	case OAuth2SecurityDefinitionKey:
 		// we can't know the flow type (implicit, password, application or accessCode) so we choose accessCode for now
-		sd[OAuth2SecurityDefinitionKey] = spec.OAuth2AccessToken(authorizationURL, tokenURL)
+		sd[OAuth2SecurityDefinitionKey] = spec.OAuth2AccessToken(authorizationURL, tknURL)
 	// TODO: Add support for API Key
-	//case ApiKeyAuthSecurityDefinitionKey:
+	// case APIKeyAuthSecurityDefinitionKey:
 	//	spec.APIKeyAuth()
 	default:
 		log.Warnf("Unsupported security definition key: %v", sdKey)

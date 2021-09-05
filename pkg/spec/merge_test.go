@@ -19,10 +19,9 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/go-openapi/spec"
 	"gotest.tools/assert"
 	"k8s.io/utils/field"
-
-	"github.com/go-openapi/spec"
 )
 
 func Test_merge(t *testing.T) {
@@ -30,16 +29,16 @@ func Test_merge(t *testing.T) {
 	op1, err := GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req1,
 		RespBody:    res1,
-		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", contentTypeHeaderName: mediaTypeApplicationJson},
-		RespHeaders: map[string]string{"X-Test-Res-1": "1", contentTypeHeaderName: mediaTypeApplicationJson},
+		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", contentTypeHeaderName: mediaTypeApplicationJSON},
+		RespHeaders: map[string]string{"X-Test-Res-1": "1", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
 	}, sd)
 	assert.NilError(t, err)
 	op2, err := GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req2,
 		RespBody:    res2,
-		ReqHeaders:  map[string]string{"X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJson},
-		RespHeaders: map[string]string{"X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJson},
+		ReqHeaders:  map[string]string{"X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
+		RespHeaders: map[string]string{"X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
 	}, sd)
 	assert.NilError(t, err)
@@ -47,8 +46,8 @@ func Test_merge(t *testing.T) {
 	combinedOp, err := GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     combinedReq,
 		RespBody:    combinedRes,
-		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", "X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJson},
-		RespHeaders: map[string]string{"X-Test-Res-1": "1", "X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJson},
+		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", "X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
+		RespHeaders: map[string]string{"X-Test-Res-1": "1", "X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
 	}, sd)
 	assert.NilError(t, err)
@@ -1916,29 +1915,41 @@ func Test_mergeParametersByInType(t *testing.T) {
 		{
 			name: "mutual and non mutual parameters",
 			args: args{
-				parameters: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, "")},
-				parameters2: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
-					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, "")},
+				parameters: []spec.Parameter{
+					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
+					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
+				},
+				parameters2: []spec.Parameter{
+					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
+					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+				},
 				path: nil,
 			},
-			want: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
+			want: []spec.Parameter{
+				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
 				*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
-				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, "")},
+				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual parameters with conflicts",
 			args: args{
-				parameters: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, "")},
-				parameters2: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, "")},
+				parameters: []spec.Parameter{
+					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
+					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
+				},
+				parameters2: []spec.Parameter{
+					*spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
+					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+				},
 				path: field.NewPath("parameters"),
 			},
-			want: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
+			want: []spec.Parameter{
+				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
 				*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
-				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, "")},
+				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("parameters").Child("X-Header-1"),
@@ -1953,6 +1964,8 @@ func Test_mergeParametersByInType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeParametersByInType(tt.args.parameters, tt.args.parameters2, tt.args.path)
+			sortParam(got)
+			sortParam(tt.want)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeParametersByInType() got = %v, want %v", got, tt.want)
 			}
@@ -2078,17 +2091,20 @@ func Test_mergeParameters(t *testing.T) {
 				parameters: []spec.Parameter{
 					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
 					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty()))},
+					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
+				},
 				parameters2: []spec.Parameter{
 					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
 					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.DateTimeProperty()))},
+					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.DateTimeProperty())),
+				},
 				path: nil,
 			},
 			want: []spec.Parameter{
 				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
 				*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-				*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty()))},
+				*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
+			},
 			want1: nil,
 		},
 		{

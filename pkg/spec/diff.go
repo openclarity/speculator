@@ -43,7 +43,7 @@ const (
 	DiffSourceProvided      DiffSource = "PROVIDED"
 )
 
-type ApiDiff struct {
+type APIDiff struct {
 	Type             DiffType
 	Path             string
 	PathID           string
@@ -73,7 +73,7 @@ func createDiffParamsFromTelemetry(telemetry *SCNTelemetry) (*DiffParams, error)
 	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
 	telemetryOp, err := telemetryToOperation(telemetry, securityDefinitions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert telemetry to operation: %v", err)
+		return nil, fmt.Errorf("failed to convert telemetry to operation: %w", err)
 	}
 	return &DiffParams{
 		operation: telemetryOp,
@@ -84,15 +84,15 @@ func createDiffParamsFromTelemetry(telemetry *SCNTelemetry) (*DiffParams, error)
 	}, nil
 }
 
-func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*ApiDiff, error) {
+func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*APIDiff, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	var apiDiff = &ApiDiff{}
+	var apiDiff *APIDiff
 	var err error
 	diffParams, err := createDiffParamsFromTelemetry(telemetry)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create diff params from telemetry. %v", err)
+		return nil, fmt.Errorf("failed to create diff params from telemetry. %w", err)
 	}
 
 	switch diffSource {
@@ -103,7 +103,7 @@ func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*A
 		}
 		apiDiff, err = s.diffProvidedSpec(diffParams)
 		if err != nil {
-			return nil, fmt.Errorf("failed to diff provided spec. %v", err)
+			return nil, fmt.Errorf("failed to diff provided spec. %w", err)
 		}
 	case DiffSourceReconstructed:
 		if !s.HasApprovedSpec() {
@@ -112,7 +112,7 @@ func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*A
 		}
 		apiDiff, err = s.diffApprovedSpec(diffParams)
 		if err != nil {
-			return nil, fmt.Errorf("failed to diff approved spec. %v", err)
+			return nil, fmt.Errorf("failed to diff approved spec. %w", err)
 		}
 	default:
 		return nil, fmt.Errorf("diff source: %v is not valid", diffSource)
@@ -121,18 +121,22 @@ func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*A
 	return apiDiff, nil
 }
 
-func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*ApiDiff, error) {
+func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathItem *oapi_spec.PathItem
 	pathFromTrie, value, found := s.PathTrie.GetPathAndValue(diffParams.path)
 	if found {
 		diffParams.path = pathFromTrie // The diff will show the parametrized path if matched and not the telemetry path
 		pathItem = s.ApprovedSpec.GetPathItem(pathFromTrie)
-		diffParams.pathID = value.(string)
+		if pathID, ok := value.(string); !ok {
+			log.Warnf("value is not a string. %v", value)
+		} else {
+			diffParams.pathID = pathID
+		}
 	}
 	return s.diffPathItem(pathItem, diffParams)
 }
 
-func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*ApiDiff, error) {
+func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathNoBase string
 	// for path /api/foo/bar and base path of /api, the path that will be saved in paths map will be /foo/bar
 	if s.ProvidedSpec.Spec.BasePath != "" {
@@ -148,8 +152,8 @@ func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*ApiDiff, error) {
 	return s.diffPathItem(&pathItem, diffParams)
 }
 
-func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams) (*ApiDiff, error) {
-	var apiDiff = &ApiDiff{}
+func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams) (*APIDiff, error) {
+	var apiDiff *APIDiff
 	method := diffParams.method
 	telemetryOp := diffParams.operation
 	path := diffParams.path
@@ -157,7 +161,7 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	pathID := diffParams.pathID
 
 	if pathItem == nil {
-		apiDiff = s.createApiDiffEvent(DiffTypeNew, nil, createPathItemFromOperation(method, telemetryOp),
+		apiDiff = s.createAPIDiffEvent(DiffTypeNew, nil, createPathItemFromOperation(method, telemetryOp),
 			uuid.FromStringOrNil(requestID), path, pathID)
 		return apiDiff, nil
 	}
@@ -165,34 +169,34 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	specOp := GetOperationFromPathItem(pathItem, method)
 	if specOp == nil {
 		// new operation
-		apiDiff := s.createApiDiffEvent(DiffTypeChanged, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
+		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
 			uuid.FromStringOrNil(requestID), path, pathID)
 		return apiDiff, nil
 	}
 
 	diff, err := calculateOperationDiff(specOp, telemetryOp, diffParams.response)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate operation diff: %v", err)
+		return nil, fmt.Errorf("failed to calculate operation diff: %w", err)
 	}
 	if diff != nil {
-		apiDiff := s.createApiDiffEvent(DiffTypeChanged, createPathItemFromOperation(method, diff.OriginalOperation),
+		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, createPathItemFromOperation(method, diff.OriginalOperation),
 			createPathItemFromOperation(method, diff.ModifiedOperation), uuid.FromStringOrNil(requestID), path, pathID)
 		return apiDiff, nil
 	}
 
 	// no diff
-	return s.createApiDiffEvent(DiffTypeNoDiff, nil, nil, uuid.FromStringOrNil(requestID),
+	return s.createAPIDiffEvent(DiffTypeNoDiff, nil, nil, uuid.FromStringOrNil(requestID),
 		path, pathID), nil
 }
 
-func (s *Spec) createApiDiffEvent(diffType DiffType, original, modified *oapi_spec.PathItem, InteractionID uuid.UUID, path, pathID string) *ApiDiff {
-	return &ApiDiff{
+func (s *Spec) createAPIDiffEvent(diffType DiffType, original, modified *oapi_spec.PathItem, interactionID uuid.UUID, path, pathID string) *APIDiff {
+	return &APIDiff{
 		Type:             diffType,
 		Path:             path,
 		PathID:           pathID,
 		OriginalPathItem: original,
 		ModifiedPathItem: modified,
-		InteractionID:    InteractionID,
+		InteractionID:    interactionID,
 		SpecID:           s.ID,
 	}
 }
@@ -206,12 +210,12 @@ func createPathItemFromOperation(method string, operation *oapi_spec.Operation) 
 func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryResponse SCNTResponse) (*operationDiff, error) {
 	clonedTelemetryOp, err := CloneOperation(telemetryOp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to clone telemetry operation: %v", err)
+		return nil, fmt.Errorf("failed to clone telemetry operation: %w", err)
 	}
 
 	clonedSpecOp, err := CloneOperation(specOp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to clone spec operation: %v", err)
+		return nil, fmt.Errorf("failed to clone spec operation: %w", err)
 	}
 
 	clonedTelemetryOp = sortParameters(clonedTelemetryOp)
@@ -226,7 +230,7 @@ func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryR
 	// Check if there is a change in the response, if so, take “produces“ into account. Otherwise don’t include “produces“ in both.
 	hasDiff, err := compareObjects(clonedSpecOp.Responses, clonedTelemetryOp.Responses)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compare responses: %v", err)
+		return nil, fmt.Errorf("failed to compare responses: %w", err)
 	}
 	if hasDiff {
 		// Found a diff
@@ -242,7 +246,7 @@ func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryR
 
 	hasDiff, err = compareObjects(clonedSpecOp, clonedTelemetryOp)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compare operations: %v", err)
+		return nil, fmt.Errorf("failed to compare operations: %w", err)
 	}
 
 	if hasDiff {
@@ -259,22 +263,22 @@ func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryR
 func compareObjects(obj1, obj2 interface{}) (hasDiff bool, err error) {
 	obj1B, err := json.Marshal(obj1)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal obj1: %v", err)
+		return false, fmt.Errorf("failed to marshal obj1: %w", err)
 	}
 
 	obj2B, err := json.Marshal(obj2)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal obj2: %v", err)
+		return false, fmt.Errorf("failed to marshal obj2: %w", err)
 	}
 
-	return bytes.Compare(obj1B, obj2B) != 0, nil
+	return !bytes.Equal(obj1B, obj2B), nil
 }
 
-// keepResponseStatusCode will remove all status codes from StatusCodeResponses map except the `statusCodeToKeep`
+// keepResponseStatusCode will remove all status codes from StatusCodeResponses map except the `statusCodeToKeep`.
 func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) (*oapi_spec.Operation, error) {
 	statusCodeInt, err := strconv.Atoi(statusCodeToKeep)
 	if err != nil {
-		return nil, fmt.Errorf("invalid status code (%+v): %v", statusCodeToKeep, err)
+		return nil, fmt.Errorf("invalid status code (%+v): %w", statusCodeToKeep, err)
 	}
 
 	// keep only the provided status code

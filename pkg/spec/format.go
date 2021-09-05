@@ -30,12 +30,12 @@ var formats = []string{
 	"ipv6",
 	"uuid",
 	"json-pointer",
-	//"relative-json-pointer", // matched with "1.147.1"
-	//"hostname",
-	//"regex",
-	//"uri",           // can be also iri
-	//"uri-reference", // can be also iri-reference
-	//"uri-template",
+	// "relative-json-pointer", // matched with "1.147.1"
+	// "hostname",
+	// "regex",
+	// "uri",           // can be also iri
+	// "uri-reference", // can be also iri-reference
+	// "uri-template",
 }
 
 func getStringFormat(value interface{}) string {
@@ -54,7 +54,7 @@ func getStringFormat(value interface{}) string {
 }
 
 // isDateFormat checks if input is a correctly formatted date with spaces (excluding RFC3339 = "2006-01-02T15:04:05Z07:00")
-// This is useful to identify date string instead of an collection
+// This is useful to identify date string instead of an collection.
 func isDateFormat(input interface{}) bool {
 	asString, ok := input.(string)
 	if !ok {

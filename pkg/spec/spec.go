@@ -27,7 +27,7 @@ import (
 	"github.com/go-openapi/validate"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/apiclarity/speculator/pkg/path_trie"
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 type Spec struct {
@@ -44,7 +44,7 @@ type Spec struct {
 	// Upon learning, this will be updated (not the ApprovedSpec field)
 	LearningSpec *LearningSpec
 
-	PathTrie path_trie.PathTrie
+	PathTrie pathtrie.PathTrie
 
 	lock sync.Mutex
 }
@@ -136,22 +136,13 @@ func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 	return nil
 }
 
-func (s *Spec) mergePathsFromLearningSpec(paths map[string]bool) *oapi_spec.PathItem {
-	var mergedPathItem = &oapi_spec.PathItem{}
-	for path := range paths {
-		pathItem := s.LearningSpec.GetPathItem(path)
-		mergedPathItem = MergePathItems(mergedPathItem, pathItem)
-	}
-	return mergedPathItem
-}
-
 func (s *Spec) GenerateOASYaml() ([]byte, error) {
-	oasJson, err := s.GenerateOASJson()
+	oasJSON, err := s.GenerateOASJson()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate json spec: %v", err)
 	}
 
-	oasYaml, err := yaml.JSONToYAML(oasJson)
+	oasYaml, err := yaml.JSONToYAML(oasJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert json to yaml: %v", err)
 	}
@@ -191,14 +182,14 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 	}
-	if err := validateRawJsonSpec(ret); err != nil {
-		return nil, fmt.Errorf("failed to validate the spec. %v\n\nspec: %s\n", err, ret)
+	if err := validateRawJSONSpec(ret); err != nil {
+		return nil, fmt.Errorf("failed to validate the spec. %v\n\nspec: %s", err, ret)
 	}
 
 	return ret, nil
 }
 
-func validateRawJsonSpec(spec []byte) error {
+func validateRawJSONSpec(spec []byte) error {
 	doc, err := loads.Analyzed(spec, "")
 	if err != nil {
 		return fmt.Errorf("failed to analyze spec: %s. %v", spec, err)

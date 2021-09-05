@@ -21,10 +21,9 @@ import (
 	"reflect"
 	"testing"
 
-	"gotest.tools/assert"
-
 	"github.com/go-openapi/spec"
 	"github.com/yudai/gojsondiff"
+	"gotest.tools/assert"
 )
 
 var agentStatusBody = `{"active":true,
@@ -36,30 +35,8 @@ var agentStatusBody = `{"active":true,
 
 var cvssBody = `{"cvss":[{"score":7.8,"vector":"AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H","version":"3"}]}`
 
-/*
-  Test:
-    type: 'object'
-    additionalProperties:
-      type: 'object'
-      properties:
-        code:
-          type: 'integer'
-        text:
-          type: 'string'
-*/
-type additionalPropertiesTest map[string]additionalPropertiesTestAnon
-type additionalPropertiesTestAnon struct {
-
-	// code
-	Code int64 `json:"code,omitempty"`
-
-	// text
-	Text string `json:"text,omitempty"`
-}
-
-type simpleMap map[string]string
-
 func generateQueryParams(t *testing.T, query string) url.Values {
+	t.Helper()
 	parseQuery, err := url.ParseQuery(query)
 	assert.NilError(t, err)
 	return parseQuery
@@ -74,12 +51,12 @@ func TestGenerateSpecOperation(t *testing.T) {
 			"X-Request-ID":        "77e1c83b-7bb0-437b-bc50-a7a58e5660ac",
 			"X-Float-Test":        "12.2",
 			"X-Collection-Test":   "a,b,c,d",
-			contentTypeHeaderName: mediaTypeApplicationJson,
+			contentTypeHeaderName: mediaTypeApplicationJSON,
 		},
 		RespHeaders: map[string]string{
 			"X-RateLimit-Limit":   "12",
 			"X-RateLimit-Reset":   "2016-10-12T11:00:00Z",
-			contentTypeHeaderName: mediaTypeApplicationJson,
+			contentTypeHeaderName: mediaTypeApplicationJSON,
 		},
 		QueryParams: generateQueryParams(t, "offset=30&limit=10"),
 		statusCode:  200,
@@ -91,6 +68,7 @@ func TestGenerateSpecOperation(t *testing.T) {
 }
 
 func validateOperation(t *testing.T, got *spec.Operation, want string) bool {
+	t.Helper()
 	templateB, err := json.Marshal(got)
 	assert.NilError(t, err)
 
@@ -118,11 +96,11 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					ReqBody:  agentStatusBody,
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
-						contentTypeHeaderName:       mediaTypeApplicationJson,
+						contentTypeHeaderName:       mediaTypeApplicationJSON,
 						authorizationTypeHeaderName: BasicAuthPrefix + "=token",
 					},
 					RespHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJson,
+						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
 					statusCode: 200,
 				},
@@ -140,18 +118,18 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					ReqBody:  agentStatusBody,
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
-						contentTypeHeaderName:       mediaTypeApplicationJson,
+						contentTypeHeaderName:       mediaTypeApplicationJSON,
 						authorizationTypeHeaderName: BearerAuthPrefix + "=token",
 					},
 					RespHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJson,
+						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
 					statusCode: 200,
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 			wantErr: false,
 		},
@@ -162,10 +140,10 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					ReqBody:  agentStatusBody,
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJson,
+						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
 					RespHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJson,
+						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
 					QueryParams: generateQueryParams(t, AccessTokenParamKey+"=token"),
 					statusCode:  200,
@@ -173,7 +151,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			},
 			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 			wantErr: false,
 		},
@@ -187,14 +165,14 @@ func TestGenerateSpecOperation1(t *testing.T) {
 						contentTypeHeaderName: mediaTypeApplicationForm,
 					},
 					RespHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJson,
+						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
 					statusCode: 200,
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 			wantErr: false,
 		},
@@ -390,7 +368,6 @@ func TestCloneOperation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			got, err := CloneOperation(tt.args.op)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CloneOperation() error = %v, wantErr %v", err, tt.wantErr)
@@ -431,7 +408,7 @@ func Test_handleAuthReqHeader(t *testing.T) {
 			},
 			wantOp: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, []string{}...),
 			wantSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 		},
 		{

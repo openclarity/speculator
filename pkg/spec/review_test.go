@@ -24,12 +24,11 @@ import (
 	"sync"
 	"testing"
 
-	"gotest.tools/assert"
-
 	oapi_spec "github.com/go-openapi/spec"
 	uuid "github.com/satori/go.uuid"
+	"gotest.tools/assert"
 
-	"github.com/apiclarity/speculator/pkg/path_trie"
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 func TestSpec_ApplyApprovedReview(t *testing.T) {
@@ -388,7 +387,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					},
 					SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{
 						BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
-						OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+						OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 					},
 				},
 				LearningSpec: &LearningSpec{
@@ -409,7 +408,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				ID:           tt.fields.ID,
 				ApprovedSpec: tt.fields.ApprovedSpec,
 				LearningSpec: tt.fields.LearningSpec,
-				PathTrie:     path_trie.New(),
+				PathTrie:     pathtrie.New(),
 			}
 			s.ApplyApprovedReview(tt.args.approvedReviews)
 
@@ -418,7 +417,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			wantB, err := json.Marshal(tt.wantSpec)
 			assert.NilError(t, err)
 
-			if bytes.Compare(specB, wantB) != 0 {
+			if !bytes.Equal(specB, wantB) {
 				t.Errorf("ApplyApprovedReview() = %v, want %v", string(specB), string(wantB))
 			}
 		})
@@ -687,7 +686,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -709,7 +708,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -731,7 +730,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -753,7 +752,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -775,7 +774,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -797,7 +796,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},
@@ -835,7 +834,7 @@ func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 				},
 			},
 			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
 			},
 		},

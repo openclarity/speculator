@@ -20,8 +20,7 @@ import (
 )
 
 func TestSpec_LearnTelemetry(t *testing.T) {
-	type fields struct {
-	}
+	type fields struct{}
 	type args struct {
 		telemetries []*SCNTelemetry
 	}
@@ -45,7 +44,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							Host:   "www.example.com",
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
-								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
 								Body:          []byte(req1),
 								TruncatedBody: false,
 							},
@@ -54,7 +53,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							StatusCode: "200",
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
-								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
 								Body:          []byte(res1),
 								TruncatedBody: false,
 							},
@@ -79,7 +78,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
 								Body:          []byte(req1),
-								Headers:       [][2]string{{"X-Test-Req-1", "req1"}, {contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{"X-Test-Req-1", "req1"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
 								TruncatedBody: false,
 							},
 						},
@@ -88,7 +87,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
 								Body:          []byte(res1),
-								Headers:       [][2]string{{"X-Test-Res-1", "res1"}, {contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{"X-Test-Res-1", "res1"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
 								TruncatedBody: false,
 							},
 						},
@@ -103,7 +102,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
 								Body:          []byte(req2),
-								Headers:       [][2]string{{"X-Test-Req-2", "req2"}, {contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{"X-Test-Req-2", "req2"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
 								TruncatedBody: false,
 							},
 						},
@@ -112,7 +111,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							SCNTCommon: SCNTCommon{
 								Version:       "1",
 								Body:          []byte(res2),
-								Headers:       [][2]string{{"X-Test-Res-2", "res2"}, {contentTypeHeaderName, mediaTypeApplicationJson}},
+								Headers:       [][2]string{{"X-Test-Res-2", "res2"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
 								TruncatedBody: false,
 							},
 						},
@@ -126,7 +125,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := CreateDefaultSpec("host", "80")
 			for _, telemetry := range tt.args.telemetries {
-				//file, _ := json.MarshalIndent(telemetry, "", " ")
+				// file, _ := json.MarshalIndent(telemetry, "", " ")
 
 				//_ = ioutil.WriteFile(fmt.Sprintf("test%v.json", i), file, 0644)
 				if err := s.LearnTelemetry(telemetry); (err != nil) != tt.wantErr {

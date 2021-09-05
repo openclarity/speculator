@@ -317,7 +317,8 @@ func mergeProperties(properties, properties2 spec.SchemaProperties, path *field.
 	// go over first properties list
 	// 1. merge mutual properties
 	// 2. add non mutual properties
-	for key, schema := range properties {
+	for key := range properties {
+		schema := properties[key]
 		if schema2, ok := properties2[key]; ok {
 			mergedSchema, conflicts := mergeSchema(&schema, &schema2, path.Child(key))
 			retConflicts = append(retConflicts, conflicts...)
@@ -450,7 +451,7 @@ func shouldReturnIfEmptySchemaType(s, s2 *spec.Schema) (*spec.Schema, bool) {
 	return nil, false
 }
 
-// used only with pointers
+// used only with pointers.
 func shouldReturnIfNil(a, b interface{}) (interface{}, bool) {
 	if isNil(a) {
 		return b, true

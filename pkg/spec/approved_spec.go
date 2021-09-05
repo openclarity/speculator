@@ -39,11 +39,11 @@ func (a *ApprovedSpec) Clone() (*ApprovedSpec, error) {
 
 	approvedSpecB, err := json.Marshal(a)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal approved spec: %v", err)
+		return nil, fmt.Errorf("failed to marshal approved spec: %w", err)
 	}
 
 	if err := json.Unmarshal(approvedSpecB, &clonedApprovedSpec); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal approved spec: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal approved spec: %w", err)
 	}
 
 	return clonedApprovedSpec, nil

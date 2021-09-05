@@ -19,9 +19,8 @@ import (
 	"net/http"
 	"testing"
 
-	"gotest.tools/assert"
-
 	oapi_spec "github.com/go-openapi/spec"
+	"gotest.tools/assert"
 )
 
 var req1 = `{"active":true,
@@ -108,6 +107,7 @@ type TestOperation struct {
 }
 
 func NewOperation(t *testing.T, data *HTTPInteractionData) *TestOperation {
+	t.Helper()
 	sd := oapi_spec.SecurityDefinitions{}
 	operation, err := GenerateSpecOperation(data, sd)
 	assert.NilError(t, err)

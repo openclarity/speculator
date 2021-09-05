@@ -17,7 +17,7 @@ package spec
 
 import "testing"
 
-// format taken from time/format.go
+// format taken from time/format.go.
 func Test_isDateFormat(t *testing.T) {
 	type args struct {
 		input interface{}

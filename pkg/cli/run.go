@@ -17,7 +17,6 @@ package cli
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
@@ -41,7 +40,7 @@ func Run(c *cli.Context) {
 	}
 	fileNames := c.StringSlice("t")
 
-	fmt.Printf("Reading interactions from files\n")
+	log.Infof("Reading interactions from files...")
 
 	for _, fileName := range fileNames {
 		log.Infof("Reading telemetry from %s", fileName)

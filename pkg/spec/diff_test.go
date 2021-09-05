@@ -23,17 +23,17 @@ import (
 	"github.com/go-openapi/spec"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/apiclarity/speculator/pkg/path_trie"
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 var Data = &HTTPInteractionData{
 	ReqBody:  req1,
 	RespBody: res1,
 	ReqHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	RespHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
 }
@@ -42,11 +42,11 @@ var DataWithAuth = &HTTPInteractionData{
 	ReqBody:  req1,
 	RespBody: res1,
 	ReqHeaders: map[string]string{
-		contentTypeHeaderName:       mediaTypeApplicationJson,
+		contentTypeHeaderName:       mediaTypeApplicationJSON,
 		authorizationTypeHeaderName: BearerAuthPrefix + "token",
 	},
 	RespHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
 }
@@ -55,10 +55,10 @@ var Data2 = &HTTPInteractionData{
 	ReqBody:  req2,
 	RespBody: res2,
 	ReqHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	RespHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
 }
@@ -67,10 +67,10 @@ var DataCombined = &HTTPInteractionData{
 	ReqBody:  combinedReq,
 	RespBody: combinedRes,
 	ReqHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	RespHeaders: map[string]string{
-		contentTypeHeaderName: mediaTypeApplicationJson,
+		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
 }
@@ -85,7 +85,7 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 			Host:   host,
 			SCNTCommon: SCNTCommon{
 				Version:       "",
-				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJson}},
+				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
 				Body:          reqBody,
 				TruncatedBody: false,
 			},
@@ -94,7 +94,7 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 			StatusCode: statusCode,
 			SCNTCommon: SCNTCommon{
 				Version:       "",
-				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJson}},
+				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
 				Body:          respBody,
 				TruncatedBody: false,
 			},
@@ -113,7 +113,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 		ID           uuid.UUID
 		ApprovedSpec *ApprovedSpec
 		LearningSpec *LearningSpec
-		PathTrie     path_trie.PathTrie
+		PathTrie     pathtrie.PathTrie
 	}
 	type args struct {
 		telemetry *SCNTelemetry
@@ -122,7 +122,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *ApiDiff
+		want    *APIDiff
 		wantErr bool
 	}{
 		{
@@ -141,7 +141,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
 				PathID:           "1",
@@ -168,7 +168,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetryWithSecurity("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:   DiffTypeChanged,
 				Path:   "/api",
 				PathID: "1",
@@ -196,7 +196,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeNew,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
@@ -222,7 +222,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				PathID:           "1",
@@ -249,7 +249,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				PathID:           "1",
@@ -276,7 +276,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api/{my-param}",
 				PathID:           "1",
@@ -304,7 +304,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api/1",
 				PathID:           "2",
@@ -348,7 +348,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *ApiDiff
+		want    *APIDiff
 		wantErr bool
 	}{
 		{
@@ -370,7 +370,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
 				OriginalPathItem: nil,
@@ -399,7 +399,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetryWithSecurity("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type: DiffTypeChanged,
 				Path: "/api",
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
@@ -429,7 +429,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeNew,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
@@ -458,7 +458,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -487,7 +487,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -517,7 +517,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			args: args{
 				telemetry: createTelemetry("req-id", http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
-			want: &ApiDiff{
+			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api/foo/bar",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -551,8 +551,8 @@ func clearProduces(op *spec.Operation) *spec.Operation {
 	return op
 }
 
-func createPathTrie(pathToValue map[string]string) path_trie.PathTrie {
-	pt := path_trie.New()
+func createPathTrie(pathToValue map[string]string) pathtrie.PathTrie {
+	pt := pathtrie.New()
 	for path, value := range pathToValue {
 		pt.Insert(path, value)
 	}

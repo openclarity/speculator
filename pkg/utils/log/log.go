@@ -36,7 +36,6 @@ func InitLogs(c *cli.Context, output io.Writer) {
 		DisableLevelTruncation: true,
 		QuoteEmptyFields:       true,
 	}
-	//log.SetFormatter(&log.JSONFormatter{})
 	log.SetFormatter(&formatter)
 
 	log.SetReportCaller(true)

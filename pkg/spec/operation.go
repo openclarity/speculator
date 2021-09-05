@@ -97,13 +97,13 @@ func getObjectSchema(value interface{}) (schema *spec.Schema, err error) {
 	schema = &spec.Schema{}
 	stringMapE, err := cast.ToStringMapE(value)
 	if err != nil {
-		return nil, fmt.Errorf("failed to cast to string map. value=%v: %v", value, err)
+		return nil, fmt.Errorf("failed to cast to string map. value=%v: %w", value, err)
 	}
 
 	schema.AddType(schemaTypeObject, "")
 	for key, val := range stringMapE {
 		if s, err := getSchema(val); err != nil {
-			return nil, fmt.Errorf("failed to get schema from string map. key=%v, value=%v: %v", key, val, err)
+			return nil, fmt.Errorf("failed to get schema from string map. key=%v, value=%v: %w", key, val, err)
 		} else {
 			schema.SetProperty(escapeString(key), *s)
 		}
@@ -123,7 +123,7 @@ func escapeString(key string) string {
 func getArraySchema(value interface{}) (schema *spec.Schema, err error) {
 	sliceE, err := cast.ToSliceE(value)
 	if err != nil {
-		return nil, fmt.Errorf("failed to cast to slice. value=%v: %v", value, err)
+		return nil, fmt.Errorf("failed to cast to slice. value=%v: %w", value, err)
 	}
 
 	// in order to support mixed type array we ...
@@ -131,7 +131,7 @@ func getArraySchema(value interface{}) (schema *spec.Schema, err error) {
 	for i := range sliceE {
 		item, err := getSchema(sliceE[i])
 		if err != nil {
-			return nil, fmt.Errorf("failed to get items schema from slice. value=%v: %v", sliceE[i], err)
+			return nil, fmt.Errorf("failed to get items schema from slice. value=%v: %w", sliceE[i], err)
 		}
 		t := []string(item.Type)[0]
 		if _, ok := schemaTypeToSchema[t]; !ok {
@@ -150,19 +150,14 @@ func getArraySchema(value interface{}) (schema *spec.Schema, err error) {
 		}
 	} else {
 		return nil, fmt.Errorf("oneOf is not supported by swagger 2.0, only by swagger 3.0. slice=%v", sliceE)
-		//items := &spec.Schema{}
-		//for _, s := range schemaTypeToSchema {
-		//	items.OneOf = append(items.OneOf, *s)
-		//}
-		//schema = spec.ArrayProperty(items)
 	}
 
 	// TODO: Should we support an array of arbitrary types? (https://swagger.io/docs/specification/data-models/data-types/#array)
-	//type: array
-	//items: {}
-	//	# [ "hello", -2, true, [5.7], {"id": 5} ]
+	// type: array
+	// items: {}
+	//	 # [ "hello", -2, true, [5.7], {"id": 5} ]
 
-	//schema.CollectionOf(*items)
+	// schema.CollectionOf(*items)
 	return schema, nil
 }
 
@@ -181,7 +176,7 @@ func (h *HTTPInteractionData) getRespContentType() string {
 	return h.RespHeaders[contentTypeHeaderName]
 }
 
-// Note: securityDefinitions might be updated
+// Note: securityDefinitions might be updated.
 func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.SecurityDefinitions) (*spec.Operation, error) {
 	operation := spec.NewOperation("")
 
@@ -190,21 +185,21 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 		if reqContentType == "" {
 			log.Infof("Missing Content-Type header, ignoring request body. (%v)", data.ReqBody)
 		} else {
-			operation.Consumes = append(operation.Produces, reqContentType)
+			operation.Consumes = append(operation.Consumes, reqContentType)
 			mediaType, mediaTypeParams, err := mime.ParseMediaType(reqContentType)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse request media type. Content-Type=%v: %v", reqContentType, err)
+				return nil, fmt.Errorf("failed to parse request media type. Content-Type=%v: %w", reqContentType, err)
 			}
 			switch mediaType {
-			case mediaTypeApplicationJson:
+			case mediaTypeApplicationJSON:
 				reqBodyJSON, err := gojsonschema.NewStringLoader(data.ReqBody).LoadJSON()
 				if err != nil {
-					return nil, fmt.Errorf("failed to load json from request body. body=%v: %v", data.ReqBody, err)
+					return nil, fmt.Errorf("failed to load json from request body. body=%v: %w", data.ReqBody, err)
 				}
 
 				reqSchema, err := getSchema(reqBodyJSON)
 				if err != nil {
-					return nil, fmt.Errorf("failed to get schema from request body. body=%v: %v", data.ReqBody, err)
+					return nil, fmt.Errorf("failed to get schema from request body. body=%v: %w", data.ReqBody, err)
 				}
 
 				// all operation have to hold the same in body name parameter (inBodyParameterName)
@@ -250,23 +245,23 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 			operation.Produces = append(operation.Produces, respContentType)
 			mediaType, _, err := mime.ParseMediaType(respContentType)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse response media type. Content-Type=%v: %v", respContentType, err)
+				return nil, fmt.Errorf("failed to parse response media type. Content-Type=%v: %w", respContentType, err)
 			}
 			switch mediaType {
-			case mediaTypeApplicationJson:
+			case mediaTypeApplicationJSON:
 				respBodyJSON, err := gojsonschema.NewStringLoader(data.RespBody).LoadJSON()
 				if err != nil {
-					return nil, fmt.Errorf("failed to load json from response body. body=%v: %v", data.RespBody, err)
+					return nil, fmt.Errorf("failed to load json from response body. body=%v: %w", data.RespBody, err)
 				}
 
 				respSchema, err := getSchema(respBodyJSON)
 				if err != nil {
-					return nil, fmt.Errorf("failed to get schema from response body. body=%v: %v", respBodyJSON, err)
+					return nil, fmt.Errorf("failed to get schema from response body. body=%v: %w", respBodyJSON, err)
 				}
 
 				response.WithSchema(respSchema)
-			//WithDescription("some response").
-			//AddExample("application/json", respBody)
+			// WithDescription("some response").
+			// AddExample("application/json", respBody)
 			default:
 				log.Infof("Treating %v as default response content type (no schema)", respContentType)
 			}

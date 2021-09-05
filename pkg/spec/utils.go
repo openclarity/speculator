@@ -23,7 +23,7 @@ import (
 	oapi_spec "github.com/go-openapi/spec"
 )
 
-// Note: securityDefinitions might be updated
+// Note: securityDefinitions might be updated.
 func telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
 	statusCode, err := strconv.Atoi(telemetry.SCNTResponse.StatusCode)
 	if err != nil {

@@ -30,7 +30,7 @@ type SpecKey string
 
 type Speculator struct {
 	Specs    map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
-	ApiDiffs []*_spec.ApiDiff
+	APIDiffs []*_spec.APIDiff
 }
 
 func CreateSpeculator() *Speculator {
@@ -44,15 +44,16 @@ func GetSpecKey(host, port string) SpecKey {
 }
 
 func GetHostAndPortFromSpecKey(key SpecKey) (host, port string, err error) {
-	info := strings.Split(string(key), ":")
-	if len(info) != 2 {
+	const hostAndPortLen = 2
+	hostAndPort := strings.Split(string(key), ":")
+	if len(hostAndPort) != hostAndPortLen {
 		return "", "", fmt.Errorf("invalid key: %v", key)
 	}
-	host = info[0]
+	host = hostAndPort[0]
 	if len(host) == 0 {
 		return "", "", fmt.Errorf("no host for key: %v", key)
 	}
-	port = info[1]
+	port = hostAndPort[1]
 	if len(port) == 0 {
 		return "", "", fmt.Errorf("no port for key: %v", key)
 	}
@@ -74,8 +75,9 @@ type AddressInfo struct {
 }
 
 func GetAddressInfoFromAddress(address string) (*AddressInfo, error) {
+	const addrLen = 2
 	addr := strings.Split(address, ":")
-	if len(addr) != 2 {
+	if len(addr) != addrLen {
 		return nil, fmt.Errorf("invalid address: %v", addr)
 	}
 
@@ -102,7 +104,7 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.SCNTelemetry) error {
 	return nil
 }
 
-func (s *Speculator) DiffTelemetry(telemetry *_spec.SCNTelemetry, diffSource _spec.DiffSource) (*_spec.ApiDiff, error) {
+func (s *Speculator) DiffTelemetry(telemetry *_spec.SCNTelemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed get destination info: %v", err)
@@ -113,7 +115,12 @@ func (s *Speculator) DiffTelemetry(telemetry *_spec.SCNTelemetry, diffSource _sp
 		return nil, fmt.Errorf("no spec for key %v", specKey)
 	}
 
-	return spec.DiffTelemetry(telemetry, diffSource)
+	apiDiff, err := spec.DiffTelemetry(telemetry, diffSource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run DiffTelemetry: %v", err)
+	}
+
+	return apiDiff, nil
 }
 
 func (s *Speculator) HasApprovedSpec(key SpecKey) bool {
@@ -131,7 +138,11 @@ func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte) error {
 		return fmt.Errorf("no spec found with key: %v", key)
 	}
 
-	return spec.LoadProvidedSpec(providedSpec)
+	if err := spec.LoadProvidedSpec(providedSpec); err != nil {
+		return fmt.Errorf("failed to load provided spec: %v", err)
+	}
+
+	return nil
 }
 
 func (s *Speculator) HasProvidedSpec(key SpecKey) bool {
@@ -144,14 +155,14 @@ func (s *Speculator) HasProvidedSpec(key SpecKey) bool {
 }
 
 func (s *Speculator) DumpSpecs() {
-	fmt.Printf("Generating Open API Specs...\n")
+	log.Infof("Generating Open API Specs...\n")
 	for specKey, spec := range s.Specs {
 		approvedYaml, err := spec.GenerateOASYaml()
 		if err != nil {
 			log.Errorf("failed to generate OAS yaml for %v.: %v", specKey, err)
 			continue
 		}
-		fmt.Printf("Spec for %s:\n%s\n\n", specKey, approvedYaml)
+		log.Infof("Spec for %s:\n%s\n\n", specKey, approvedYaml)
 	}
 }
 
@@ -191,7 +202,8 @@ func DecodeState(filePath string) (*Speculator, error) {
 }
 
 func openFile(filePath string) (*os.File, error) {
-	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 400)
+	const perm = 400
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.FileMode(perm))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file (%v) for writing: %v", filePath, err)
 	}
@@ -200,8 +212,7 @@ func openFile(filePath string) (*os.File, error) {
 }
 
 func closeFile(f *os.File) {
-	err := f.Close()
-	if err != nil {
+	if err := f.Close(); err != nil {
 		log.Errorf("Failed to close file: %v", err)
 	}
 }

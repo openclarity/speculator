@@ -52,7 +52,7 @@ func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 				}),
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
 			},
 		},
@@ -68,7 +68,7 @@ func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 				}),
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
 			},
 		},
@@ -87,7 +87,7 @@ func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 				}),
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
 				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
 			},
 		},
@@ -95,7 +95,7 @@ func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 			name: "Unsupported SecurityDefinition key - no change to sd",
 			args: args{
 				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 				},
 				op: createOperationWithSecurity([]map[string][]string{
 					{
@@ -104,31 +104,31 @@ func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 				}),
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 		},
 		{
 			name: "nil operation - no change to sd",
 			args: args{
 				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 				},
 				op: nil,
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 		},
 		{
 			name: "operation without security - no change to sd",
 			args: args{
 				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 				},
 				op: createOperationWithSecurity(nil),
 			},
 			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tokenURL),
+				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
 		},
 	}
