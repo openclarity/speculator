@@ -139,7 +139,8 @@ func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathNoBase string
 	// for path /api/foo/bar and base path of /api, the path that will be saved in paths map will be /foo/bar
-	if s.ProvidedSpec.Spec.BasePath != "" {
+	// If basePath is not specified, it defaults to /
+	if s.ProvidedSpec.Spec.BasePath != "" && s.ProvidedSpec.Spec.BasePath != "/" {
 		pathNoBase = strings.TrimPrefix(diffParams.path, s.ProvidedSpec.Spec.BasePath)
 	} else {
 		pathNoBase = diffParams.path

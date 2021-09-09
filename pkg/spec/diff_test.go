@@ -527,6 +527,36 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "test base path = / (default)",
+			fields: fields{
+				ID: uuid.FromStringOrNil("spec-id"),
+				ProvidedSpec: &ProvidedSpec{
+					Spec: &spec.Swagger{
+						SwaggerProps: spec.SwaggerProps{
+							BasePath: "/",
+							Paths: &spec.Paths{
+								Paths: map[string]spec.PathItem{
+									"/foo/bar": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+								},
+							},
+						},
+					},
+				},
+			},
+			args: args{
+				telemetry: createTelemetry("req-id", http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
+			},
+			want: &APIDiff{
+				Type:             DiffTypeChanged,
+				Path:             "/foo/bar",
+				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+				InteractionID:    uuid.FromStringOrNil("req-id"),
+				SpecID:           uuid.FromStringOrNil("spec-id"),
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
