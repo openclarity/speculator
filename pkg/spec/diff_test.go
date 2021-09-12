@@ -109,6 +109,9 @@ func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, r
 }
 
 func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
+	reqID := "req-id"
+	reqUUID := uuid.NewV5(uuid.Nil, reqID)
+	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
 	type fields struct {
 		ID           uuid.UUID
 		ApprovedSpec *ApprovedSpec
@@ -128,7 +131,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 		{
 			name: "No diff",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -139,7 +142,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
@@ -147,15 +150,15 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				PathID:           "1",
 				OriginalPathItem: nil,
 				ModifiedPathItem: nil,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Security diff",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -166,7 +169,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetryWithSecurity("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type:   DiffTypeChanged,
@@ -175,15 +178,15 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, Data).Op)).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, DataWithAuth).Op)).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "New PathItem",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -194,22 +197,22 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNew,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "New Operation",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -220,7 +223,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
@@ -228,15 +231,15 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Changed Operation",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -247,7 +250,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
@@ -255,15 +258,15 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Parameterized path",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api/{my-param}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -274,7 +277,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
@@ -282,15 +285,15 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Parameterized path but also exact path",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*spec.PathItem{
 						"/api/1": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -302,7 +305,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
@@ -310,8 +313,8 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
@@ -337,6 +340,9 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 }
 
 func TestSpec_DiffTelemetry_Provided(t *testing.T) {
+	reqID := "req-id"
+	reqUUID := uuid.NewV5(uuid.Nil, reqID)
+	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
 	type fields struct {
 		ID           uuid.UUID
 		ProvidedSpec *ProvidedSpec
@@ -354,7 +360,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 		{
 			name: "No diff",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -368,22 +374,22 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
 				OriginalPathItem: nil,
 				ModifiedPathItem: nil,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Security diff",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -397,7 +403,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetryWithSecurity("req-id", http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type: DiffTypeChanged,
@@ -405,15 +411,15 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, Data).Op)).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, DataWithAuth).Op)).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "New PathItem",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -427,22 +433,22 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNew,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "New Operation",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -456,22 +462,22 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Changed Operation",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -485,22 +491,22 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "test remove base path",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -515,22 +521,22 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api/foo/bar",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
 		{
 			name: "test base path = / (default)",
 			fields: fields{
-				ID: uuid.FromStringOrNil("spec-id"),
+				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &spec.Swagger{
 						SwaggerProps: spec.SwaggerProps{
@@ -545,15 +551,15 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 			},
 			args: args{
-				telemetry: createTelemetry("req-id", http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/foo/bar",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-				InteractionID:    uuid.FromStringOrNil("req-id"),
-				SpecID:           uuid.FromStringOrNil("spec-id"),
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
 			},
 			wantErr: false,
 		},
