@@ -96,16 +96,16 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					ReqBody:  agentStatusBody,
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
-						contentTypeHeaderName:       mediaTypeApplicationJSON,
+						contentTypeHeaderName:       mediaTypeApplicationHalJSON,
 						authorizationTypeHeaderName: BasicAuthPrefix + "=token",
 					},
 					RespHeaders: map[string]string{
-						contentTypeHeaderName: mediaTypeApplicationJSON,
+						contentTypeHeaderName: mediaTypeApplicationHalJSON,
 					},
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"BasicAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"security\":[{\"BasicAuth\":[]}],\"consumes\":[\"application/hal+json\"],\"produces\":[\"application/hal+json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
 				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
 			},
