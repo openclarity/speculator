@@ -160,10 +160,11 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	path := diffParams.path
 	requestID := diffParams.requestID
 	pathID := diffParams.pathID
+	reqUUID := uuid.NewV5(uuid.Nil, requestID)
 
 	if pathItem == nil {
 		apiDiff = s.createAPIDiffEvent(DiffTypeNew, nil, createPathItemFromOperation(method, telemetryOp),
-			uuid.FromStringOrNil(requestID), path, pathID)
+			reqUUID, path, pathID)
 		return apiDiff, nil
 	}
 
@@ -171,7 +172,7 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	if specOp == nil {
 		// new operation
 		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
-			uuid.FromStringOrNil(requestID), path, pathID)
+			reqUUID, path, pathID)
 		return apiDiff, nil
 	}
 
@@ -181,13 +182,12 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	}
 	if diff != nil {
 		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, createPathItemFromOperation(method, diff.OriginalOperation),
-			createPathItemFromOperation(method, diff.ModifiedOperation), uuid.FromStringOrNil(requestID), path, pathID)
+			createPathItemFromOperation(method, diff.ModifiedOperation), reqUUID, path, pathID)
 		return apiDiff, nil
 	}
 
 	// no diff
-	return s.createAPIDiffEvent(DiffTypeNoDiff, nil, nil, uuid.FromStringOrNil(requestID),
-		path, pathID), nil
+	return s.createAPIDiffEvent(DiffTypeNoDiff, nil, nil, reqUUID, path, pathID), nil
 }
 
 func (s *Spec) createAPIDiffEvent(diffType DiffType, original, modified *oapi_spec.PathItem, interactionID uuid.UUID, path, pathID string) *APIDiff {
