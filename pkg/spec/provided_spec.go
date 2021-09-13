@@ -22,6 +22,8 @@ import (
 	"github.com/ghodss/yaml"
 	oapispec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 type ProvidedSpec struct {
@@ -54,6 +56,8 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 		return fmt.Errorf("failed to unmarshal spec: %v", err)
 	}
 
+	// path trie need to be repopulated from start on each new spec
+	s.ProvidedPathTrie = pathtrie.New()
 	for path := range s.ProvidedSpec.Spec.Paths.Paths {
 		if pathID, ok := pathToPathID[path]; ok {
 			s.ProvidedPathTrie.Insert(path, pathID)
