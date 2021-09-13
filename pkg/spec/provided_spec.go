@@ -28,7 +28,7 @@ type ProvidedSpec struct {
 	Spec *oapispec.Swagger
 }
 
-func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
+func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]string) error {
 	// Convert YAML to JSON. Since JSON is a subset of YAML, passing JSON through
 	// this method should be a no-op.
 	jsonSpec, err := yaml.YAMLToJSON(providedSpec)
@@ -54,5 +54,18 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 		return fmt.Errorf("failed to unmarshal spec: %v", err)
 	}
 
+	for path := range s.ProvidedSpec.Spec.Paths.Paths {
+		if pathID, ok := pathToPathID[path]; ok {
+			s.ProvidedPathTrie.Insert(path, pathID)
+		}
+	}
+
+	return nil
+}
+
+func (p *ProvidedSpec) GetPathItem(path string) *oapispec.PathItem {
+	if pi, ok := p.Spec.Paths.Paths[path]; ok {
+		return &pi
+	}
 	return nil
 }

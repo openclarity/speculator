@@ -141,13 +141,13 @@ func (s *Speculator) HasApprovedSpec(key SpecKey) bool {
 	return spec.HasApprovedSpec()
 }
 
-func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte) error {
+func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte, pathToPathID map[string]string) error {
 	spec, ok := s.Specs[key]
 	if !ok {
 		return fmt.Errorf("no spec found with key: %v", key)
 	}
 
-	if err := spec.LoadProvidedSpec(providedSpec); err != nil {
+	if err := spec.LoadProvidedSpec(providedSpec, pathToPathID); err != nil {
 		return fmt.Errorf("failed to load provided spec: %w", err)
 	}
 

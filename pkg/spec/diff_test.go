@@ -113,10 +113,10 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
 	type fields struct {
-		ID           uuid.UUID
-		ApprovedSpec *ApprovedSpec
-		LearningSpec *LearningSpec
-		PathTrie     pathtrie.PathTrie
+		ID               uuid.UUID
+		ApprovedSpec     *ApprovedSpec
+		LearningSpec     *LearningSpec
+		ApprovedPathTrie pathtrie.PathTrie
 	}
 	type args struct {
 		telemetry *SCNTelemetry
@@ -137,7 +137,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api": "1",
 				}),
 			},
@@ -164,7 +164,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api": "1",
 				}),
 			},
@@ -192,7 +192,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api": "1",
 				}),
 			},
@@ -218,7 +218,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api": "1",
 				}),
 			},
@@ -245,7 +245,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api": "1",
 				}),
 			},
@@ -272,7 +272,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api/{my-param}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api/{my-param}": "1",
 				}),
 			},
@@ -299,7 +299,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 						"/api/1": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 					},
 				},
-				PathTrie: createPathTrie(map[string]string{
+				ApprovedPathTrie: createPathTrie(map[string]string{
 					"/api/{my-param}": "1",
 					"/api/1":          "2",
 				}),
@@ -323,10 +323,10 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
 				SpecInfo: SpecInfo{
-					ID:           tt.fields.ID,
-					ApprovedSpec: tt.fields.ApprovedSpec,
-					LearningSpec: tt.fields.LearningSpec,
-					PathTrie:     tt.fields.PathTrie,
+					ID:               tt.fields.ID,
+					ApprovedSpec:     tt.fields.ApprovedSpec,
+					LearningSpec:     tt.fields.LearningSpec,
+					ApprovedPathTrie: tt.fields.ApprovedPathTrie,
 				},
 				OpGenerator: CreateTestNewOperationGenerator(),
 			}
@@ -347,8 +347,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
 	type fields struct {
-		ID           uuid.UUID
-		ProvidedSpec *ProvidedSpec
+		ID               uuid.UUID
+		ProvidedSpec     *ProvidedSpec
+		ProvidedPathTrie pathtrie.PathTrie
 	}
 	type args struct {
 		telemetry *SCNTelemetry
@@ -375,6 +376,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
@@ -382,6 +386,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
+				PathID:           "1",
 				OriginalPathItem: nil,
 				ModifiedPathItem: nil,
 				InteractionID:    reqUUID,
@@ -404,13 +409,17 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
-				Type: DiffTypeChanged,
-				Path: "/api",
+				Type:   DiffTypeChanged,
+				Path:   "/api",
+				PathID: "1",
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, Data).Op)).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, DataWithAuth).Op)).PathItem,
@@ -434,6 +443,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
@@ -463,6 +475,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
@@ -470,6 +485,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
+				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -492,6 +508,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
@@ -499,6 +518,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/api",
+				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -507,7 +527,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test remove base path",
+			name: "test remove base path + parametrized path",
 			fields: fields{
 				ID: specUUID,
 				ProvidedSpec: &ProvidedSpec{
@@ -516,19 +536,23 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 							BasePath: "/api",
 							Paths: &spec.Paths{
 								Paths: map[string]spec.PathItem{
-									"/foo/bar": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+									"/foo/{param}": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 								},
 							},
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/foo/{param}": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
-				Path:             "/api/foo/bar",
+				Path:             "/api/foo/{param}",
+				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -552,6 +576,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 						},
 					},
 				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/foo/bar": "1",
+				}),
 			},
 			args: args{
 				telemetry: createTelemetry(reqID, http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
@@ -559,6 +586,76 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeChanged,
 				Path:             "/foo/bar",
+				PathID:           "1",
+				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Parameterized path",
+			fields: fields{
+				ID: specUUID,
+				ProvidedSpec: &ProvidedSpec{
+					Spec: &spec.Swagger{
+						SwaggerProps: spec.SwaggerProps{
+							BasePath: "/",
+							Paths: &spec.Paths{
+								Paths: map[string]spec.PathItem{
+									"/api/{my-param}": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+								},
+							},
+						},
+					},
+				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api/{my-param}": "1",
+				}),
+			},
+			args: args{
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
+			},
+			want: &APIDiff{
+				Type:             DiffTypeChanged,
+				Path:             "/api/{my-param}",
+				PathID:           "1",
+				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Parameterized path but also exact path",
+			fields: fields{
+				ID: specUUID,
+				ProvidedSpec: &ProvidedSpec{
+					Spec: &spec.Swagger{
+						SwaggerProps: spec.SwaggerProps{
+							BasePath: "/",
+							Paths: &spec.Paths{
+								Paths: map[string]spec.PathItem{
+									"/api/1": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+								},
+							},
+						},
+					},
+				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api/{my-param}": "1",
+					"/api/1":          "2",
+				}),
+			},
+			args: args{
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
+			},
+			want: &APIDiff{
+				Type:             DiffTypeChanged,
+				Path:             "/api/1",
+				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -571,8 +668,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
 				SpecInfo: SpecInfo{
-					ID:           tt.fields.ID,
-					ProvidedSpec: tt.fields.ProvidedSpec,
+					ID:               tt.fields.ID,
+					ProvidedSpec:     tt.fields.ProvidedSpec,
+					ProvidedPathTrie: tt.fields.ProvidedPathTrie,
 				},
 				OpGenerator: CreateTestNewOperationGenerator(),
 			}

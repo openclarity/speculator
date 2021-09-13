@@ -99,7 +99,7 @@ func TestSpec_LoadProvidedSpec(t *testing.T) {
 					ProvidedSpec: tt.fields.ProvidedSpec,
 				},
 			}
-			if err := s.LoadProvidedSpec(tt.args.providedSpec); (err != nil) != tt.wantErr {
+			if err := s.LoadProvidedSpec(tt.args.providedSpec, nil); (err != nil) != tt.wantErr {
 				t.Errorf("LoadProvidedSpec() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {

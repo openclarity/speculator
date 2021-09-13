@@ -150,13 +150,14 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 	pathTrie.Insert("/api", 1)
 
 	type fields struct {
-		Host         string
-		Port         string
-		ID           uuid.UUID
-		ProvidedSpec *ProvidedSpec
-		ApprovedSpec *ApprovedSpec
-		LearningSpec *LearningSpec
-		PathTrie     pathtrie.PathTrie
+		Host             string
+		Port             string
+		ID               uuid.UUID
+		ProvidedSpec     *ProvidedSpec
+		ApprovedSpec     *ApprovedSpec
+		LearningSpec     *LearningSpec
+		ApprovedPathTrie pathtrie.PathTrie
+		ProvidedPathTrie pathtrie.PathTrie
 	}
 	tests := []struct {
 		name    string
@@ -192,7 +193,8 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 					},
 				},
-				PathTrie: pathTrie,
+				ApprovedPathTrie: pathTrie,
+				ProvidedPathTrie: pathTrie,
 			},
 			want: &Spec{
 				SpecInfo: SpecInfo{
@@ -221,7 +223,8 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 						},
 					},
-					PathTrie: pathTrie,
+					ApprovedPathTrie: pathTrie,
+					ProvidedPathTrie: pathTrie,
 				},
 			},
 			wantErr: false,
@@ -231,13 +234,14 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
 				SpecInfo: SpecInfo{
-					Host:         tt.fields.Host,
-					Port:         tt.fields.Port,
-					ID:           tt.fields.ID,
-					ProvidedSpec: tt.fields.ProvidedSpec,
-					ApprovedSpec: tt.fields.ApprovedSpec,
-					LearningSpec: tt.fields.LearningSpec,
-					PathTrie:     tt.fields.PathTrie,
+					Host:             tt.fields.Host,
+					Port:             tt.fields.Port,
+					ID:               tt.fields.ID,
+					ProvidedSpec:     tt.fields.ProvidedSpec,
+					ApprovedSpec:     tt.fields.ApprovedSpec,
+					LearningSpec:     tt.fields.LearningSpec,
+					ApprovedPathTrie: tt.fields.ApprovedPathTrie,
+					ProvidedPathTrie: tt.fields.ProvidedPathTrie,
 				},
 			}
 			got, err := s.SpecInfoClone()

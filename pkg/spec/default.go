@@ -34,7 +34,8 @@ func CreateDefaultSpec(host string, port string, config OperationGeneratorConfig
 				PathItems:           map[string]*spec.PathItem{},
 				SecurityDefinitions: map[string]*spec.SecurityScheme{},
 			},
-			PathTrie: pathtrie.New(),
+			ApprovedPathTrie: pathtrie.New(),
+			ProvidedPathTrie: pathtrie.New(),
 		},
 		OpGenerator: NewOperationGenerator(config),
 	}

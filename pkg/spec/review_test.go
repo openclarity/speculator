@@ -107,7 +107,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
 					},
-					PathTrie: createPathTrie(map[string]string{
+					ApprovedPathTrie: createPathTrie(map[string]string{
 						"/api/{param1}": "1",
 					}),
 				},
@@ -179,7 +179,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 							"api/3/foo": &NewTestPathItem().PathItem,
 						},
 					},
-					PathTrie: createPathTrie(map[string]string{
+					ApprovedPathTrie: createPathTrie(map[string]string{
 						"/api/{param1}": "1",
 						"/api/1":        "2",
 					}),
@@ -247,7 +247,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
 					},
-					PathTrie: createPathTrie(map[string]string{
+					ApprovedPathTrie: createPathTrie(map[string]string{
 						"/api/{test}": "1",
 					}),
 				},
@@ -335,7 +335,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
 					},
-					PathTrie: createPathTrie(map[string]string{
+					ApprovedPathTrie: createPathTrie(map[string]string{
 						"/api/{param1}":               "1",
 						"/api/foo":                    "2",
 						"/user/{param1}/bar/{param2}": "3",
@@ -433,7 +433,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
 					},
-					PathTrie: createPathTrie(map[string]string{
+					ApprovedPathTrie: createPathTrie(map[string]string{
 						"/api/{param1}":               "1",
 						"/api/foo":                    "2",
 						"/user/{param1}/bar/{param2}": "3",
@@ -494,7 +494,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 						},
 					},
-					PathTrie: pathtrie.New(),
+					ApprovedPathTrie: pathtrie.New(),
 				},
 			},
 			wantErr: true,
@@ -510,7 +510,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:           tt.fields.ID,
 					ApprovedSpec: tt.fields.ApprovedSpec,
 					LearningSpec: tt.fields.LearningSpec,
-					PathTrie:     pathtrie.New(),
+					ApprovedPathTrie:     pathtrie.New(),
 				},
 			}
 			err := s.ApplyApprovedReview(tt.args.approvedReviews)
