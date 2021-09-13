@@ -65,8 +65,7 @@ bin/licensei-${LICENSEI_VERSION}:
 
 .PHONY: license-check
 license-check: bin/licensei ## Run license check
-	# TODO: fixme
-	#bin/licensei check
+	bin/licensei check
 	bin/licensei header
 
 .PHONY: license-cache
