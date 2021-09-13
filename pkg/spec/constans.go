@@ -53,7 +53,8 @@ const (
 )
 
 const (
-	mediaTypeApplicationJSON   = "application/json"
-	mediaTypeApplicationForm   = "application/x-www-form-urlencoded"
-	mediaTypeMultipartFormData = "multipart/form-data"
+	mediaTypeApplicationJSON    = "application/json"
+	mediaTypeApplicationHalJSON = "application/hal+json"
+	mediaTypeApplicationForm    = "application/x-www-form-urlencoded"
+	mediaTypeMultipartFormData  = "multipart/form-data"
 )

@@ -26,6 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/xeipuuv/gojsonschema"
+
+	"github.com/apiclarity/speculator/pkg/utils"
 )
 
 var (
@@ -190,8 +192,8 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse request media type. Content-Type=%v: %w", reqContentType, err)
 			}
-			switch mediaType {
-			case mediaTypeApplicationJSON:
+			switch true {
+			case utils.IsApplicationJSONMediaType(mediaType):
 				reqBodyJSON, err := gojsonschema.NewStringLoader(data.ReqBody).LoadJSON()
 				if err != nil {
 					return nil, fmt.Errorf("failed to load json from request body. body=%v: %w", data.ReqBody, err)
@@ -204,9 +206,9 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 
 				// all operation have to hold the same in body name parameter (inBodyParameterName)
 				operation.AddParam(spec.BodyParam(inBodyParameterName, reqSchema))
-			case mediaTypeApplicationForm:
+			case mediaType == mediaTypeApplicationForm:
 				operation, securityDefinitions = addApplicationFormParams(operation, securityDefinitions, data.ReqBody)
-			case mediaTypeMultipartFormData:
+			case mediaType == mediaTypeMultipartFormData:
 				// multipart/form-data (used to upload files or a combination of files and primitive data).
 				// https://swagger.io/docs/specification/2-0/file-upload/
 				operation, err = addMultipartFormDataParams(operation, data.ReqBody, mediaTypeParams)
@@ -247,8 +249,8 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse response media type. Content-Type=%v: %w", respContentType, err)
 			}
-			switch mediaType {
-			case mediaTypeApplicationJSON:
+			switch true {
+			case utils.IsApplicationJSONMediaType(mediaType):
 				respBodyJSON, err := gojsonschema.NewStringLoader(data.RespBody).LoadJSON()
 				if err != nil {
 					return nil, fmt.Errorf("failed to load json from response body. body=%v: %w", data.RespBody, err)
