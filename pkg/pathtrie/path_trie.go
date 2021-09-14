@@ -63,7 +63,7 @@ func NewWithPathSeparator(pathSeparator string) PathTrie {
 }
 
 // Insert val at path, with path segments separated by PathSeparator.
-// Returns true if a new node was created, false if an existing node
+// Returns true if a new path was created, false if an existing path
 // was overwritten.
 //
 func (pt *PathTrie) Insert(path string, val interface{}) bool {
@@ -73,14 +73,14 @@ func (pt *PathTrie) Insert(path string, val interface{}) bool {
 }
 
 // Insert val at path, with path segments separated by PathSeparator.
-// Returns true if a new node was created, false if an existing node
+// Returns true if a new path was created, false if an existing path
 // was overwritten.
 //
 // The merge function is responsible for updating the existing value
 // with the new value.
-func (pt *PathTrie) InsertMerge(path string, val interface{}, merge ValueMergeFunc) (isNewNode bool) {
+func (pt *PathTrie) InsertMerge(path string, val interface{}, merge ValueMergeFunc) (isNewPath bool) {
 	trie := pt.Trie
-	isNewNode = true
+	isNewPath = true
 	// TODO: what about path that ends with pt.PathSeparator is it different ?
 	segments := strings.Split(path, pt.PathSeparator)
 
@@ -90,8 +90,9 @@ func (pt *PathTrie) InsertMerge(path string, val interface{}, merge ValueMergeFu
 		if node, ok := trie[segment]; ok {
 			if isLastSegment {
 				// If this is the last path segment, then this is the node to update.
+				// If node value is not empty it means that an existing path is overwritten
+				isNewPath = utils.IsNil(node.Value)
 				merge(&node.Value, &val)
-				isNewNode = false
 			} else {
 				// Otherwise, continue descending.
 				trie = node.Children
@@ -103,7 +104,7 @@ func (pt *PathTrie) InsertMerge(path string, val interface{}, merge ValueMergeFu
 		}
 	}
 
-	return isNewNode
+	return isNewPath
 }
 
 func (pt *PathTrie) createPathTrieNode(segments []string, idx int, isLastSegment bool, val interface{}) *TrieNode {

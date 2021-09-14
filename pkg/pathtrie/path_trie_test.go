@@ -687,11 +687,11 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 		name          string
 		fields        fields
 		args          args
-		wantIsNewNode bool
+		wantIsNewPath bool
 		expectedTrie  PathToTrieNode
 	}{
 		{
-			name: "new node",
+			name: "new path",
 			fields: fields{
 				Trie:          PathToTrieNode{},
 				PathSeparator: "/",
@@ -701,7 +701,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				val:   1,
 				merge: shouldNotBeCalledMergeFunc,
 			},
-			wantIsNewNode: true,
+			wantIsNewPath: true,
 			expectedTrie: PathToTrieNode{
 				"": &TrieNode{
 					Children: map[string]*TrieNode{
@@ -721,7 +721,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 			},
 		},
 		{
-			name: "existing node",
+			name: "existing path",
 			fields: fields{
 				Trie: PathToTrieNode{
 					"": &TrieNode{
@@ -747,7 +747,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				val:   2,
 				merge: swapMerge,
 			},
-			wantIsNewNode: false,
+			wantIsNewPath: false,
 			expectedTrie: PathToTrieNode{
 				"": &TrieNode{
 					Children: map[string]*TrieNode{
@@ -767,7 +767,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 			},
 		},
 		{
-			name: "path with separator at the end - expected new node",
+			name: "path with separator at the end - expected new path",
 			fields: fields{
 				Trie: PathToTrieNode{
 					"": &TrieNode{
@@ -793,7 +793,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				val:   2,
 				merge: shouldNotBeCalledMergeFunc,
 			},
-			wantIsNewNode: true,
+			wantIsNewPath: true,
 			expectedTrie: PathToTrieNode{
 				"": &TrieNode{
 					Children: map[string]*TrieNode{
@@ -847,7 +847,7 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				val:   2,
 				merge: swapMerge,
 			},
-			wantIsNewNode: true,
+			wantIsNewPath: true,
 			expectedTrie: PathToTrieNode{
 				"": &TrieNode{
 					Children: map[string]*TrieNode{
@@ -874,6 +874,96 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "new path for existing node",
+			fields: fields{
+				// /carts/{customerID}/items/{itemID}
+				Trie: PathToTrieNode{
+					"": &TrieNode{
+						Children: map[string]*TrieNode{
+							"carts": {
+								Children: map[string]*TrieNode{
+									"{customerID}": {
+										Children: map[string]*TrieNode{
+											"items": {
+												Children: map[string]*TrieNode{
+													"{itemID}": {
+														Children:         make(PathToTrieNode),
+														Name:             "{itemID}",
+														FullPath:         "/carts/{customerID}/items/{itemID}",
+														PathParamCounter: 1,
+														Value:            "1",
+													},
+												},
+												Name:             "items",
+												FullPath:         "/carts/{customerID}/items",
+												PathParamCounter: 1,
+											},
+										},
+										Name:             "{customerID}",
+										FullPath:         "/carts/{customerID}",
+										PathParamCounter: 0,
+									},
+								},
+								Name:             "carts",
+								FullPath:         "/carts",
+								PathParamCounter: 0,
+							},
+						},
+						Name:             "",
+						FullPath:         "",
+						PathParamCounter: 0,
+						Value:            nil,
+					},
+				},
+				PathSeparator: "/",
+			},
+			args: args{
+				path:  "/carts/{customerID}/items",
+				val:   "2",
+				merge: swapMerge,
+			},
+			wantIsNewPath: true,
+			expectedTrie: PathToTrieNode{
+				"": &TrieNode{
+					Children: map[string]*TrieNode{
+						"carts": {
+							Children: map[string]*TrieNode{
+								"{customerID}": {
+									Children: map[string]*TrieNode{
+										"items": {
+											Children: map[string]*TrieNode{
+												"{itemID}": {
+													Children:         map[string]*TrieNode{},
+													Name:             "{itemID}",
+													FullPath:         "/carts/{customerID}/items/{itemID}",
+													PathParamCounter: 1,
+													Value:            "1",
+												},
+											},
+											Name:             "items",
+											FullPath:         "/carts/{customerID}/items",
+											PathParamCounter: 1,
+											Value:            "2",
+										},
+									},
+									Name:             "{customerID}",
+									FullPath:         "/carts/{customerID}",
+									PathParamCounter: 0,
+								},
+							},
+							Name:             "carts",
+							FullPath:         "/carts",
+							PathParamCounter: 0,
+						},
+					},
+					Name:             "",
+					FullPath:         "",
+					PathParamCounter: 0,
+					Value:            nil,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -881,8 +971,8 @@ func TestPathTrie_InsertMerge(t *testing.T) {
 				Trie:          tt.fields.Trie,
 				PathSeparator: tt.fields.PathSeparator,
 			}
-			if gotIsNewNode := pt.InsertMerge(tt.args.path, tt.args.val, tt.args.merge); gotIsNewNode != tt.wantIsNewNode {
-				t.Errorf("InsertMerge() = %v, want %v", gotIsNewNode, tt.wantIsNewNode)
+			if gotIsNewPath := pt.InsertMerge(tt.args.path, tt.args.val, tt.args.merge); gotIsNewPath != tt.wantIsNewPath {
+				t.Errorf("InsertMerge() = %v, want %v", gotIsNewPath, tt.wantIsNewPath)
 			}
 			if !reflect.DeepEqual(pt.Trie, tt.expectedTrie) {
 				t.Errorf("InsertMerge() Trie = %+v, want %+v", marshal(pt.Trie), marshal(tt.expectedTrie))
