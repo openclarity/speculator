@@ -111,9 +111,9 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) {
 		s.ApprovedSpec.PathItems[pathItemReview.ParameterizedPath] = mergedPathItem
 
 		// add the modified path to the path tree
-		isNewNode := s.PathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
-		if !isNewNode {
-			log.Warnf("Node path was updated, a new node should be created in a normal case. path=%v, uuid=%v", pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
+		isNewPath := s.PathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
+		if !isNewPath {
+			log.Warnf("Path was updated, a new path should be created in a normal case. path=%v, uuid=%v", pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		}
 
 		// populate SecurityDefinitions from the approved merged path item

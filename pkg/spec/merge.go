@@ -16,13 +16,13 @@
 package spec
 
 import (
-	"reflect"
 	"strconv"
 
 	"github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/field"
 
+	"github.com/apiclarity/speculator/pkg/utils"
 	"github.com/apiclarity/speculator/pkg/utils/slice"
 )
 
@@ -453,16 +453,12 @@ func shouldReturnIfEmptySchemaType(s, s2 *spec.Schema) (*spec.Schema, bool) {
 
 // used only with pointers.
 func shouldReturnIfNil(a, b interface{}) (interface{}, bool) {
-	if isNil(a) {
+	if utils.IsNil(a) {
 		return b, true
 	}
-	if isNil(b) {
+	if utils.IsNil(b) {
 		return a, true
 	}
 	// both are not nil
 	return nil, false
-}
-
-func isNil(a interface{}) bool {
-	return a == nil || (reflect.ValueOf(a).Kind() == reflect.Ptr && reflect.ValueOf(a).IsNil())
 }

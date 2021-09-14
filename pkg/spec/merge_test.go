@@ -148,48 +148,6 @@ func Test_shouldReturnIfEmpty(t *testing.T) {
 	}
 }
 
-func Test_isNil(t *testing.T) {
-	integer := 1
-	var schema *spec.Schema
-	type args struct {
-		a interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "nil",
-			args: args{
-				a: nil,
-			},
-			want: true,
-		},
-		{
-			name: "nil pointer",
-			args: args{
-				a: schema,
-			},
-			want: true,
-		},
-		{
-			name: "not nil",
-			args: args{
-				a: &integer,
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isNil(tt.args.a); got != tt.want {
-				t.Errorf("isNil() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_shouldReturnIfNil(t *testing.T) {
 	var nilSchema *spec.Schema
 	schema := spec.Schema{}
