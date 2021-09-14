@@ -124,3 +124,8 @@ var testOperationGeneratorConfig = OperationGeneratorConfig{
 	ResponseHeadersToIgnore: []string{contentTypeHeaderName},
 	RequestHeadersToIgnore:  []string{acceptTypeHeaderName, authorizationTypeHeaderName, contentTypeHeaderName},
 }
+
+func (op *TestOperation) Deprecated() *TestOperation {
+	op.Op.Deprecate()
+	return op
+}

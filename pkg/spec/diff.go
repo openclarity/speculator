@@ -31,9 +31,10 @@ import (
 type DiffType string
 
 const (
-	DiffTypeNew     DiffType = "NEW"
-	DiffTypeChanged DiffType = "CHANGED"
-	DiffTypeNoDiff  DiffType = "NO_DIFF"
+	DiffTypeNoDiff      DiffType = "NO_DIFF"
+	DiffTypeZombieDiff  DiffType = "ZOMBIE_DIFF"
+	DiffTypeShadowDiff  DiffType = "SHADOW_DIFF"
+	DiffTypeGeneralDiff DiffType = "GENERAL_DIFF"
 )
 
 type DiffSource string
@@ -188,7 +189,7 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	reqUUID := uuid.NewV5(uuid.Nil, requestID)
 
 	if pathItem == nil {
-		apiDiff = s.createAPIDiffEvent(DiffTypeNew, nil, createPathItemFromOperation(method, telemetryOp),
+		apiDiff = s.createAPIDiffEvent(DiffTypeShadowDiff, nil, createPathItemFromOperation(method, telemetryOp),
 			reqUUID, path, pathID)
 		return apiDiff, nil
 	}
@@ -196,7 +197,7 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	specOp := GetOperationFromPathItem(pathItem, method)
 	if specOp == nil {
 		// new operation
-		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
+		apiDiff := s.createAPIDiffEvent(DiffTypeShadowDiff, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
 			reqUUID, path, pathID)
 		return apiDiff, nil
 	}
@@ -206,7 +207,11 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 		return nil, fmt.Errorf("failed to calculate operation diff: %w", err)
 	}
 	if diff != nil {
-		apiDiff := s.createAPIDiffEvent(DiffTypeChanged, createPathItemFromOperation(method, diff.OriginalOperation),
+		diffType := DiffTypeGeneralDiff
+		if specOp.Deprecated {
+			diffType = DiffTypeZombieDiff
+		}
+		apiDiff := s.createAPIDiffEvent(diffType, createPathItemFromOperation(method, diff.OriginalOperation),
 			createPathItemFromOperation(method, diff.ModifiedOperation), reqUUID, path, pathID)
 		return apiDiff, nil
 	}
