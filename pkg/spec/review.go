@@ -16,6 +16,7 @@
 package spec
 
 import (
+	"fmt"
 	"strings"
 
 	oapi_spec "github.com/go-openapi/spec"
@@ -87,9 +88,15 @@ func (s *Spec) createLearningParametrizedPaths() *LearningParametrizedPaths {
 	return &learningParametrizedPaths
 }
 
-func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) {
+func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	// first update the review into a copy of the state, in case the validation will fail
+	clonedSpec, err := s.Clone()
+	if err != nil {
+		return fmt.Errorf("failed to clone spec. %v", err)
+	}
 
 	for _, pathItemReview := range approvedReviews.PathItemsReview {
 		mergedPathItem := &oapi_spec.PathItem{}
@@ -102,23 +109,32 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) {
 			mergedPathItem = MergePathItems(mergedPathItem, pathItem)
 
 			// delete path from learning spec
-			delete(s.LearningSpec.PathItems, path)
+			delete(clonedSpec.LearningSpec.PathItems, path)
 		}
 
 		addPathParamsToPathItem(mergedPathItem, pathItemReview.ParameterizedPath, pathItemReview.Paths)
 
 		// add modified path and merged path item to ApprovedSpec
-		s.ApprovedSpec.PathItems[pathItemReview.ParameterizedPath] = mergedPathItem
+		clonedSpec.ApprovedSpec.PathItems[pathItemReview.ParameterizedPath] = mergedPathItem
 
 		// add the modified path to the path tree
-		isNewPath := s.PathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
+		isNewPath := clonedSpec.PathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		if !isNewPath {
 			log.Warnf("Path was updated, a new path should be created in a normal case. path=%v, uuid=%v", pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		}
 
 		// populate SecurityDefinitions from the approved merged path item
-		s.ApprovedSpec.SecurityDefinitions = updateSecurityDefinitionsFromPathItem(s.ApprovedSpec.SecurityDefinitions, mergedPathItem)
+		clonedSpec.ApprovedSpec.SecurityDefinitions = updateSecurityDefinitionsFromPathItem(clonedSpec.ApprovedSpec.SecurityDefinitions, mergedPathItem)
 	}
+
+	if _, err := clonedSpec.GenerateOASJson(); err != nil {
+		return fmt.Errorf("failed to generate Open API Spec. %v", err)
+	}
+	s.ApprovedSpec = clonedSpec.ApprovedSpec
+	s.PathTrie = clonedSpec.PathTrie
+	s.LearningSpec = clonedSpec.LearningSpec
+
+	return nil
 }
 
 func updateSecurityDefinitionsFromPathItem(sd oapi_spec.SecurityDefinitions, item *oapi_spec.PathItem) oapi_spec.SecurityDefinitions {

@@ -166,8 +166,8 @@ func (s *Speculator) DumpSpecs() {
 	}
 }
 
-func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) {
-	s.Specs[specKey].ApplyApprovedReview(approvedReview)
+func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) error {
+	return s.Specs[specKey].ApplyApprovedReview(approvedReview)
 }
 
 func (s *Speculator) EncodeState(filePath string) error {

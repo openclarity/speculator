@@ -189,6 +189,21 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	return ret, nil
 }
 
+func (s *Spec) Clone() (*Spec, error) {
+	clonedSpec := new(Spec)
+
+	specB, err := json.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal spec: %w", err)
+	}
+
+	if err := json.Unmarshal(specB, &clonedSpec); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal spec: %w", err)
+	}
+
+	return clonedSpec, nil
+}
+
 func validateRawJSONSpec(spec []byte) error {
 	doc, err := loads.Analyzed(spec, "")
 	if err != nil {
