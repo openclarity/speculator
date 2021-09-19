@@ -18,12 +18,14 @@ package spec
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/apiclarity/speculator/pkg/pathtrie"
-	oapi_spec "github.com/go-openapi/spec"
-	uuid "github.com/satori/go.uuid"
 	"net/http"
 	"sync"
 	"testing"
+
+	oapi_spec "github.com/go-openapi/spec"
+	uuid "github.com/satori/go.uuid"
+
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 func TestSpec_LearnTelemetry(t *testing.T) {
@@ -165,11 +167,11 @@ func TestSpec_Clone(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "clone spec",
-			fields:  fields{
-				Host:         "host",
-				Port:         "80",
-				ID:           uuidVar,
+			name: "clone spec",
+			fields: fields{
+				Host: "host",
+				Port: "80",
+				ID:   uuidVar,
 				ProvidedSpec: &ProvidedSpec{
 					Spec: &oapi_spec.Swagger{
 						SwaggerProps: oapi_spec.SwaggerProps{
@@ -192,9 +194,9 @@ func TestSpec_Clone(t *testing.T) {
 							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 					},
 				},
-				PathTrie:     pathTrie,
+				PathTrie: pathTrie,
 			},
-			want:    &Spec{
+			want: &Spec{
 				SpecInfo: SpecInfo{
 					Host: "host",
 					Port: "80",

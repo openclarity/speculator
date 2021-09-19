@@ -16,8 +16,9 @@
 package spec
 
 import (
-	"github.com/apiclarity/speculator/pkg/pathtrie"
 	"github.com/go-openapi/spec"
+
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 func CreateDefaultSpec(host string, port string) *Spec {
