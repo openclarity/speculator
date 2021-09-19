@@ -30,6 +30,7 @@ import (
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
+// NOTE: when adding new fields to the Spec, make sure they to copy them also in ApplyApprovedReview (if needed)
 type Spec struct {
 	// Host of the spec
 	Host string

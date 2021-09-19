@@ -34,6 +34,7 @@ import (
 func TestSpec_ApplyApprovedReview(t *testing.T) {
 	host := "host"
 	port := "8080"
+	uuidVar := uuid.NewV4()
 
 	type fields struct {
 		Host         string
@@ -58,7 +59,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			fields: fields{
 				Host: host,
 				Port: port,
-				ID: uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -94,7 +95,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				ID:   uuid.UUID{},
+				ID:   uuidVar,
 				Host: host,
 				Port: port,
 				ApprovedSpec: &ApprovedSpec{
@@ -116,7 +117,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			fields: fields{
 				Host: host,
 				Port: port,
-				ID: uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -163,7 +164,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			wantSpec: &Spec{
 				Host: host,
 				Port: port,
-				ID:   uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{
 						"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
@@ -187,7 +188,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			fields: fields{
 				Host: host,
 				Port: port,
-				ID: uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -232,7 +233,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			wantSpec: &Spec{
 				Host: host,
 				Port: port,
-				ID:   uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{
 						"/api/{test}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data).Op).WithPathParams("test", schemaTypeString, "").PathItem,
@@ -252,7 +253,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			fields: fields{
 				Host: host,
 				Port: port,
-				ID: uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -316,7 +317,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			wantSpec: &Spec{
 				Host: host,
 				Port: port,
-				ID:   uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{
 						"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
@@ -340,7 +341,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			fields: fields{
 				Host: host,
 				Port: port,
-				ID: uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems:           map[string]*oapi_spec.PathItem{},
 					SecurityDefinitions: oapi_spec.SecurityDefinitions{},
@@ -408,7 +409,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			wantSpec: &Spec{
 				Host: host,
 				Port: port,
-				ID:   uuid.UUID{},
+				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{
 						"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").PathItem,
@@ -434,7 +435,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 		{
 			name: "spec not valid (no host and port) - validation error. spec should not be changed",
 			fields: fields{
-				ID: uuid.UUID{},
+				ID: uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -470,7 +471,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				ID:   uuid.UUID{},
+				ID: uuidVar,
 				ApprovedSpec: &ApprovedSpec{
 					PathItems: map[string]*oapi_spec.PathItem{},
 				},
@@ -482,9 +483,9 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 					},
 				},
-				PathTrie:     pathtrie.New(),
+				PathTrie: pathtrie.New(),
 			},
-			wantErr:  true,
+			wantErr: true,
 		},
 	}
 
