@@ -16,24 +16,25 @@
 package spec
 
 import (
-	"github.com/go-openapi/spec"
-
 	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/go-openapi/spec"
 )
 
 func CreateDefaultSpec(host string, port string) *Spec {
 	return &Spec{
-		Host: host,
-		Port: port,
-		LearningSpec: &LearningSpec{
-			PathItems:           map[string]*spec.PathItem{},
-			SecurityDefinitions: map[string]*spec.SecurityScheme{},
+		SpecInfo: SpecInfo{
+			Host: host,
+			Port: port,
+			LearningSpec: &LearningSpec{
+				PathItems:           map[string]*spec.PathItem{},
+				SecurityDefinitions: map[string]*spec.SecurityScheme{},
+			},
+			ApprovedSpec: &ApprovedSpec{
+				PathItems:           map[string]*spec.PathItem{},
+				SecurityDefinitions: map[string]*spec.SecurityScheme{},
+			},
+			PathTrie: pathtrie.New(),
 		},
-		ApprovedSpec: &ApprovedSpec{
-			PathItems:           map[string]*spec.PathItem{},
-			SecurityDefinitions: map[string]*spec.SecurityScheme{},
-		},
-		PathTrie: pathtrie.New(),
 	}
 }
 

@@ -322,10 +322,12 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				ID:           tt.fields.ID,
-				ApprovedSpec: tt.fields.ApprovedSpec,
-				LearningSpec: tt.fields.LearningSpec,
-				PathTrie:     tt.fields.PathTrie,
+				SpecInfo: SpecInfo{
+					ID:           tt.fields.ID,
+					ApprovedSpec: tt.fields.ApprovedSpec,
+					LearningSpec: tt.fields.LearningSpec,
+					PathTrie:     tt.fields.PathTrie,
+				},
 			}
 			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceReconstructed)
 			if (err != nil) != tt.wantErr {
@@ -567,8 +569,10 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				ID:           tt.fields.ID,
-				ProvidedSpec: tt.fields.ProvidedSpec,
+				SpecInfo: SpecInfo{
+					ID:           tt.fields.ID,
+					ProvidedSpec: tt.fields.ProvidedSpec,
+				},
 			}
 			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceProvided)
 			if (err != nil) != tt.wantErr {

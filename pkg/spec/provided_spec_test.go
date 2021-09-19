@@ -95,7 +95,9 @@ func TestSpec_LoadProvidedSpec(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				ProvidedSpec: tt.fields.ProvidedSpec,
+				SpecInfo: SpecInfo{
+					ProvidedSpec: tt.fields.ProvidedSpec,
+				},
 			}
 			if err := s.LoadProvidedSpec(tt.args.providedSpec); (err != nil) != tt.wantErr {
 				t.Errorf("LoadProvidedSpec() error = %v, wantErr %v", err, tt.wantErr)

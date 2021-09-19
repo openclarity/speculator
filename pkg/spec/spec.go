@@ -30,8 +30,13 @@ import (
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
-// NOTE: when adding new fields to the Spec, make sure they to copy them also in ApplyApprovedReview (if needed)
 type Spec struct {
+	SpecInfo
+
+	lock sync.Mutex
+}
+
+type SpecInfo struct {
 	// Host of the spec
 	Host string
 
@@ -46,8 +51,6 @@ type Spec struct {
 	LearningSpec *LearningSpec
 
 	PathTrie pathtrie.PathTrie
-
-	lock sync.Mutex
 }
 
 type LearningParametrizedPaths struct {
@@ -191,18 +194,21 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 }
 
 func (s *Spec) Clone() (*Spec, error) {
-	clonedSpec := new(Spec)
+	var clonedSpecInfo SpecInfo
 
-	specB, err := json.Marshal(s)
+	specB, err := json.Marshal(s.SpecInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal spec: %w", err)
+		return nil, fmt.Errorf("failed to marshal spec info: %w", err)
 	}
 
-	if err := json.Unmarshal(specB, &clonedSpec); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal spec: %w", err)
+	if err := json.Unmarshal(specB, &clonedSpecInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal spec info: %w", err)
 	}
 
-	return clonedSpec, nil
+	return &Spec{
+		SpecInfo: clonedSpecInfo,
+		lock:     sync.Mutex{},
+	}, nil
 }
 
 func validateRawJSONSpec(spec []byte) error {

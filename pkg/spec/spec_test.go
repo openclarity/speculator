@@ -195,32 +195,34 @@ func TestSpec_Clone(t *testing.T) {
 				PathTrie:     pathTrie,
 			},
 			want:    &Spec{
-				Host: "host",
-				Port: "80",
-				ID:   uuidVar,
-				ProvidedSpec: &ProvidedSpec{
-					Spec: &oapi_spec.Swagger{
-						SwaggerProps: oapi_spec.SwaggerProps{
-							Paths: &oapi_spec.Paths{
-								Paths: map[string]oapi_spec.PathItem{
-									"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+				SpecInfo: SpecInfo{
+					Host: "host",
+					Port: "80",
+					ID:   uuidVar,
+					ProvidedSpec: &ProvidedSpec{
+						Spec: &oapi_spec.Swagger{
+							SwaggerProps: oapi_spec.SwaggerProps{
+								Paths: &oapi_spec.Paths{
+									Paths: map[string]oapi_spec.PathItem{
+										"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+									},
 								},
 							},
 						},
 					},
-				},
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/api/2": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
 					},
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/1": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/api/2": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+						},
+					},
+					PathTrie: pathTrie,
 				},
-				PathTrie: pathTrie,
 			},
 			wantErr: false,
 		},
@@ -228,13 +230,15 @@ func TestSpec_Clone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				Host:         tt.fields.Host,
-				Port:         tt.fields.Port,
-				ID:           tt.fields.ID,
-				ProvidedSpec: tt.fields.ProvidedSpec,
-				ApprovedSpec: tt.fields.ApprovedSpec,
-				LearningSpec: tt.fields.LearningSpec,
-				PathTrie:     tt.fields.PathTrie,
+				SpecInfo: SpecInfo{
+					Host:         tt.fields.Host,
+					Port:         tt.fields.Port,
+					ID:           tt.fields.ID,
+					ProvidedSpec: tt.fields.ProvidedSpec,
+					ApprovedSpec: tt.fields.ApprovedSpec,
+					LearningSpec: tt.fields.LearningSpec,
+					PathTrie:     tt.fields.PathTrie,
+				},
 			}
 			got, err := s.Clone()
 			if (err != nil) != tt.wantErr {

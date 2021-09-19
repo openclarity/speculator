@@ -95,20 +95,22 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				ID:   uuidVar,
-				Host: host,
-				Port: port,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+				SpecInfo: SpecInfo{
+					ID:   uuidVar,
+					Host: host,
+					Port: port,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+						},
 					},
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
+					},
+					PathTrie: createPathTrie(map[string]string{
+						"/api/{param1}": "1",
+					}),
 				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				PathTrie: createPathTrie(map[string]string{
-					"/api/{param1}": "1",
-				}),
 			},
 			wantErr: false,
 		},
@@ -162,24 +164,26 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				Host: host,
-				Port: port,
-				ID:   uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
-						"/api/1":        &NewTestPathItem().WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
+				SpecInfo: SpecInfo{
+					Host: host,
+					Port: port,
+					ID:   uuidVar,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/1":        &NewTestPathItem().WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
+						},
 					},
-				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"api/3/foo": &NewTestPathItem().PathItem,
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"api/3/foo": &NewTestPathItem().PathItem,
+						},
 					},
+					PathTrie: createPathTrie(map[string]string{
+						"/api/{param1}": "1",
+						"/api/1":        "2",
+					}),
 				},
-				PathTrie: createPathTrie(map[string]string{
-					"/api/{param1}": "1",
-					"/api/1":        "2",
-				}),
 			},
 			wantErr: false,
 		},
@@ -231,20 +235,22 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				Host: host,
-				Port: port,
-				ID:   uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/{test}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data).Op).WithPathParams("test", schemaTypeString, "").PathItem,
+				SpecInfo: SpecInfo{
+					Host: host,
+					Port: port,
+					ID:   uuidVar,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/{test}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data).Op).WithPathParams("test", schemaTypeString, "").PathItem,
+						},
 					},
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
+					},
+					PathTrie: createPathTrie(map[string]string{
+						"/api/{test}": "1",
+					}),
 				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				PathTrie: createPathTrie(map[string]string{
-					"/api/{test}": "1",
-				}),
 			},
 			wantErr: false,
 		},
@@ -315,24 +321,26 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				Host: host,
-				Port: port,
-				ID:   uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
-						"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+				SpecInfo: SpecInfo{
+					Host: host,
+					Port: port,
+					ID:   uuidVar,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+						},
 					},
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
+					},
+					PathTrie: createPathTrie(map[string]string{
+						"/api/{param1}":               "1",
+						"/api/foo":                    "2",
+						"/user/{param1}/bar/{param2}": "3",
+					}),
 				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				PathTrie: createPathTrie(map[string]string{
-					"/api/{param1}":               "1",
-					"/api/foo":                    "2",
-					"/user/{param1}/bar/{param2}": "3",
-				}),
 			},
 			wantErr: false,
 		},
@@ -407,28 +415,30 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				Host: host,
-				Port: port,
-				ID:   uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").PathItem,
-						"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(OAuth2SecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+				SpecInfo: SpecInfo{
+					Host: host,
+					Port: port,
+					ID:   uuidVar,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(OAuth2SecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+						},
+						SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{
+							BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+							OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
+						},
 					},
-					SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{
-						BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
-						OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
 					},
+					PathTrie: createPathTrie(map[string]string{
+						"/api/{param1}":               "1",
+						"/api/foo":                    "2",
+						"/user/{param1}/bar/{param2}": "3",
+					}),
 				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				PathTrie: createPathTrie(map[string]string{
-					"/api/{param1}":               "1",
-					"/api/foo":                    "2",
-					"/user/{param1}/bar/{param2}": "3",
-				}),
 			},
 			wantErr: false,
 		},
@@ -471,19 +481,21 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantSpec: &Spec{
-				ID: uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/api/2": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+				SpecInfo: SpecInfo{
+					ID: uuidVar,
+					ApprovedSpec: &ApprovedSpec{
+						PathItems: map[string]*oapi_spec.PathItem{},
 					},
+					LearningSpec: &LearningSpec{
+						PathItems: map[string]*oapi_spec.PathItem{
+							"/api/1": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/api/2": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+						},
+					},
+					PathTrie: pathtrie.New(),
 				},
-				PathTrie: pathtrie.New(),
 			},
 			wantErr: true,
 		},
@@ -492,12 +504,14 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				Host:         tt.fields.Host,
-				Port:         tt.fields.Port,
-				ID:           tt.fields.ID,
-				ApprovedSpec: tt.fields.ApprovedSpec,
-				LearningSpec: tt.fields.LearningSpec,
-				PathTrie:     pathtrie.New(),
+				SpecInfo: SpecInfo{
+					Host:         tt.fields.Host,
+					Port:         tt.fields.Port,
+					ID:           tt.fields.ID,
+					ApprovedSpec: tt.fields.ApprovedSpec,
+					LearningSpec: tt.fields.LearningSpec,
+					PathTrie:     pathtrie.New(),
+				},
 			}
 			err := s.ApplyApprovedReview(tt.args.approvedReviews)
 			if (err != nil) != tt.wantErr {
@@ -624,9 +638,11 @@ func TestSpec_CreateSuggestedReview(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				ID:           tt.fields.ID,
-				ApprovedSpec: tt.fields.ApprovedSpec,
-				LearningSpec: tt.fields.LearningSpec,
+				SpecInfo: SpecInfo{
+					ID:           tt.fields.ID,
+					ApprovedSpec: tt.fields.ApprovedSpec,
+					LearningSpec: tt.fields.LearningSpec,
+				},
 			}
 			got := s.CreateSuggestedReview()
 			sort.Slice(got.PathItemsReview, func(i, j int) bool {
@@ -676,11 +692,12 @@ func TestSpec_createLearningParametrizedPaths(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
-				Host:         tt.fields.Host,
-				ID:           tt.fields.ID,
-				ApprovedSpec: tt.fields.ApprovedSpec,
-				LearningSpec: tt.fields.LearningSpec,
-				lock:         tt.fields.lock,
+				SpecInfo: SpecInfo{
+					Host:         tt.fields.Host,
+					ID:           tt.fields.ID,
+					ApprovedSpec: tt.fields.ApprovedSpec,
+					LearningSpec: tt.fields.LearningSpec,
+				},
 			}
 			if got := s.createLearningParametrizedPaths(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createLearningParametrizedPaths() = %v, want %v", got, tt.want)

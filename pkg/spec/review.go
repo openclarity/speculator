@@ -130,9 +130,7 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 	if _, err := clonedSpec.GenerateOASJson(); err != nil {
 		return fmt.Errorf("failed to generate Open API Spec. %v", err)
 	}
-	s.ApprovedSpec = clonedSpec.ApprovedSpec
-	s.PathTrie = clonedSpec.PathTrie
-	s.LearningSpec = clonedSpec.LearningSpec
+	s.SpecInfo = clonedSpec.SpecInfo
 
 	return nil
 }
