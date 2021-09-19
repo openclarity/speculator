@@ -190,7 +190,7 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	}
 	if err := validateRawJSONSpec(ret); err != nil {
 		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
-		return nil, fmt.Errorf("failed to validate the spec. %v. %w", err, errors.SpecValidationError)
+		return nil, fmt.Errorf("failed to validate the spec. %w", err)
 	}
 
 	return ret, nil
@@ -221,7 +221,7 @@ func validateRawJSONSpec(spec []byte) error {
 	}
 	err = validate.Spec(doc, strfmt.Default)
 	if err != nil {
-		return fmt.Errorf("spec validation failed. %v", err)
+		return fmt.Errorf("spec validation failed. %v. %w", err, errors.SpecValidationError)
 	}
 	return nil
 }
