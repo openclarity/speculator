@@ -18,6 +18,8 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apiclarity/speculator/pkg/utils/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/ghodss/yaml"
 	oapi_spec "github.com/go-openapi/spec"
@@ -36,7 +38,8 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 	}
 
 	if err := validateRawJSONSpec(jsonSpec); err != nil {
-		return fmt.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
+		log.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
+		return fmt.Errorf("provided spec is not valid. %v. %w", err, errors.SpecValidationError)
 	}
 	s.ProvidedSpec = &ProvidedSpec{
 		Spec: &oapi_spec.Swagger{

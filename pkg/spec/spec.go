@@ -18,6 +18,8 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apiclarity/speculator/pkg/utils/errors"
+	log "github.com/sirupsen/logrus"
 	"sync"
 
 	"github.com/ghodss/yaml"
@@ -143,7 +145,7 @@ func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 func (s *Spec) GenerateOASYaml() ([]byte, error) {
 	oasJSON, err := s.GenerateOASJson()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate json spec: %v", err)
+		return nil, fmt.Errorf("failed to generate json spec: %w", err)
 	}
 
 	oasYaml, err := yaml.JSONToYAML(oasJSON)
@@ -187,7 +189,8 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 	}
 	if err := validateRawJSONSpec(ret); err != nil {
-		return nil, fmt.Errorf("failed to validate the spec. %v\n\nspec: %s", err, ret)
+		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
+		return nil, fmt.Errorf("failed to validate the spec. %v. %w", err, errors.SpecValidationError)
 	}
 
 	return ret, nil

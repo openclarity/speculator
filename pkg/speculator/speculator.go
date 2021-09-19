@@ -139,7 +139,7 @@ func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte) error {
 	}
 
 	if err := spec.LoadProvidedSpec(providedSpec); err != nil {
-		return fmt.Errorf("failed to load provided spec: %v", err)
+		return fmt.Errorf("failed to load provided spec: %w", err)
 	}
 
 	return nil
@@ -159,7 +159,7 @@ func (s *Speculator) DumpSpecs() {
 	for specKey, spec := range s.Specs {
 		approvedYaml, err := spec.GenerateOASYaml()
 		if err != nil {
-			log.Errorf("failed to generate OAS yaml for %v.: %v", specKey, err)
+			log.Errorf("failed to generate OAS yaml for %v.: %w", specKey, err)
 			continue
 		}
 		log.Infof("Spec for %s:\n%s\n\n", specKey, approvedYaml)
