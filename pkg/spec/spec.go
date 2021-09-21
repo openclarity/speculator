@@ -18,8 +18,6 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apiclarity/speculator/pkg/utils/errors"
-	log "github.com/sirupsen/logrus"
 	"sync"
 
 	"github.com/ghodss/yaml"
@@ -28,8 +26,10 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 	uuid "github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/apiclarity/speculator/pkg/utils/errors"
 )
 
 type Spec struct {
@@ -221,7 +221,7 @@ func validateRawJSONSpec(spec []byte) error {
 	}
 	err = validate.Spec(doc, strfmt.Default)
 	if err != nil {
-		return fmt.Errorf("spec validation failed. %v. %w", err, errors.SpecValidationError)
+		return fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
 	}
 	return nil
 }

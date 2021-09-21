@@ -18,14 +18,14 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/ghodss/yaml"
-	oapi_spec "github.com/go-openapi/spec"
+	oapispec "github.com/go-openapi/spec"
+	log "github.com/sirupsen/logrus"
 )
 
 type ProvidedSpec struct {
-	Spec *oapi_spec.Swagger
+	Spec *oapispec.Swagger
 }
 
 func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
@@ -41,10 +41,10 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 		return fmt.Errorf("provided spec is not valid. %w", err)
 	}
 	s.ProvidedSpec = &ProvidedSpec{
-		Spec: &oapi_spec.Swagger{
-			SwaggerProps: oapi_spec.SwaggerProps{
-				Paths: &oapi_spec.Paths{
-					Paths: map[string]oapi_spec.PathItem{},
+		Spec: &oapispec.Swagger{
+			SwaggerProps: oapispec.SwaggerProps{
+				Paths: &oapispec.Paths{
+					Paths: map[string]oapispec.PathItem{},
 				},
 			},
 		},

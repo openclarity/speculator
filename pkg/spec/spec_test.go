@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"sync"
 	"testing"
 
 	oapi_spec "github.com/go-openapi/spec"
@@ -158,7 +157,6 @@ func TestSpec_Clone(t *testing.T) {
 		ApprovedSpec *ApprovedSpec
 		LearningSpec *LearningSpec
 		PathTrie     pathtrie.PathTrie
-		lock         sync.Mutex
 	}
 	tests := []struct {
 		name    string
@@ -250,7 +248,7 @@ func TestSpec_Clone(t *testing.T) {
 			gotB, _ := json.Marshal(got)
 			wantB, _ := json.Marshal(tt.want)
 
-			if bytes.Compare(gotB, wantB) != 0 {
+			if !bytes.Equal(gotB, wantB) {
 				t.Errorf("Clone() got = %s, want %s", gotB, wantB)
 			}
 		})

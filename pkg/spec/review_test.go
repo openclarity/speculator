@@ -666,7 +666,6 @@ func TestSpec_createLearningParametrizedPaths(t *testing.T) {
 		ID           uuid.UUID
 		ApprovedSpec *ApprovedSpec
 		LearningSpec *LearningSpec
-		lock         sync.Mutex
 	}
 	tests := []struct {
 		name   string

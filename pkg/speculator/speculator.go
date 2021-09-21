@@ -159,7 +159,7 @@ func (s *Speculator) DumpSpecs() {
 	for specKey, spec := range s.Specs {
 		approvedYaml, err := spec.GenerateOASYaml()
 		if err != nil {
-			log.Errorf("failed to generate OAS yaml for %v.: %w", specKey, err)
+			log.Errorf("failed to generate OAS yaml for %v.: %v", specKey, err)
 			continue
 		}
 		log.Infof("Spec for %s:\n%s\n\n", specKey, approvedYaml)
@@ -167,7 +167,8 @@ func (s *Speculator) DumpSpecs() {
 }
 
 func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) error {
-	return s.Specs[specKey].ApplyApprovedReview(approvedReview)
+	err := s.Specs[specKey].ApplyApprovedReview(approvedReview)
+	return fmt.Errorf("%w", err)
 }
 
 func (s *Speculator) EncodeState(filePath string) error {
