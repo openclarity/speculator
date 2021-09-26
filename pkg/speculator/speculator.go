@@ -29,16 +29,16 @@ import (
 type SpecKey string
 
 type Config struct {
-	OperationGeneratorConfig *_spec.OperationGeneratorConfig
+	OperationGeneratorConfig _spec.OperationGeneratorConfig
 }
 
 type Speculator struct {
 	Specs map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
 
-	config *Config
+	config Config
 }
 
-func CreateSpeculator(config *Config) *Speculator {
+func CreateSpeculator(config Config) *Speculator {
 	log.Infof("Creating Speculator. config=%v", config)
 	return &Speculator{
 		Specs:  make(map[SpecKey]*_spec.Spec),

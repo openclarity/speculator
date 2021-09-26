@@ -120,7 +120,7 @@ func CreateTestNewOperationGenerator() *OperationGenerator {
 	return NewOperationGenerator(testOperationGeneratorConfig)
 }
 
-var testOperationGeneratorConfig = &OperationGeneratorConfig{
+var testOperationGeneratorConfig = OperationGeneratorConfig{
 	ResponseHeadersToIgnore: []string{contentTypeHeaderName},
 	RequestHeadersToIgnore:  []string{acceptTypeHeaderName, authorizationTypeHeaderName, contentTypeHeaderName},
 }

@@ -21,7 +21,7 @@ import (
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
-func CreateDefaultSpec(host string, port string, config *OperationGeneratorConfig) *Spec {
+func CreateDefaultSpec(host string, port string, config OperationGeneratorConfig) *Spec {
 	return &Spec{
 		SpecInfo: SpecInfo{
 			Host: host,

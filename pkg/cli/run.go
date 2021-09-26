@@ -73,9 +73,9 @@ func Run(c *cli.Context) {
 	}
 }
 
-func createSpeculatorConfig() *speculator.Config {
-	return &speculator.Config{
-		OperationGeneratorConfig: &spec.OperationGeneratorConfig{
+func createSpeculatorConfig() speculator.Config {
+	return speculator.Config{
+		OperationGeneratorConfig: spec.OperationGeneratorConfig{
 			ResponseHeadersToIgnore: viper.GetStringSlice("RESPONSE_HEADERS_TO_IGNORE"),
 			RequestHeadersToIgnore:  viper.GetStringSlice("REQUEST_HEADERS_TO_IGNORE"),
 		},

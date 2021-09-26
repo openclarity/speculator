@@ -189,7 +189,7 @@ type OperationGenerator struct {
 	requestHeadersToIgnore map[string]struct{}
 }
 
-func NewOperationGenerator(config *OperationGeneratorConfig) *OperationGenerator {
+func NewOperationGenerator(config OperationGeneratorConfig) *OperationGenerator {
 	return &OperationGenerator{
 		responseHeadersToIgnore: slice.ToLowerKeyMap(config.ResponseHeadersToIgnore),
 		requestHeadersToIgnore:  slice.ToLowerKeyMap(config.RequestHeadersToIgnore),
