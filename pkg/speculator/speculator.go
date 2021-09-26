@@ -139,7 +139,7 @@ func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte) error {
 	}
 
 	if err := spec.LoadProvidedSpec(providedSpec); err != nil {
-		return fmt.Errorf("failed to load provided spec: %v", err)
+		return fmt.Errorf("failed to load provided spec: %w", err)
 	}
 
 	return nil
@@ -166,8 +166,9 @@ func (s *Speculator) DumpSpecs() {
 	}
 }
 
-func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) {
-	s.Specs[specKey].ApplyApprovedReview(approvedReview)
+func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) error {
+	err := s.Specs[specKey].ApplyApprovedReview(approvedReview)
+	return fmt.Errorf("%w", err)
 }
 
 func (s *Speculator) EncodeState(filePath string) error {

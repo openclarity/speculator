@@ -26,11 +26,19 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
 	uuid "github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/apiclarity/speculator/pkg/utils/errors"
 )
 
 type Spec struct {
+	SpecInfo
+
+	lock sync.Mutex
+}
+
+type SpecInfo struct {
 	// Host of the spec
 	Host string
 
@@ -45,8 +53,6 @@ type Spec struct {
 	LearningSpec *LearningSpec
 
 	PathTrie pathtrie.PathTrie
-
-	lock sync.Mutex
 }
 
 type LearningParametrizedPaths struct {
@@ -139,7 +145,7 @@ func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 func (s *Spec) GenerateOASYaml() ([]byte, error) {
 	oasJSON, err := s.GenerateOASJson()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate json spec: %v", err)
+		return nil, fmt.Errorf("failed to generate json spec: %w", err)
 	}
 
 	oasYaml, err := yaml.JSONToYAML(oasJSON)
@@ -183,10 +189,29 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 	}
 	if err := validateRawJSONSpec(ret); err != nil {
-		return nil, fmt.Errorf("failed to validate the spec. %v\n\nspec: %s", err, ret)
+		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
+		return nil, fmt.Errorf("failed to validate the spec. %w", err)
 	}
 
 	return ret, nil
+}
+
+func (s *Spec) Clone() (*Spec, error) {
+	var clonedSpecInfo SpecInfo
+
+	specB, err := json.Marshal(s.SpecInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal spec info: %w", err)
+	}
+
+	if err := json.Unmarshal(specB, &clonedSpecInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal spec info: %w", err)
+	}
+
+	return &Spec{
+		SpecInfo: clonedSpecInfo,
+		lock:     sync.Mutex{},
+	}, nil
 }
 
 func validateRawJSONSpec(spec []byte) error {
@@ -196,7 +221,7 @@ func validateRawJSONSpec(spec []byte) error {
 	}
 	err = validate.Spec(doc, strfmt.Default)
 	if err != nil {
-		return fmt.Errorf("spec validation failed. %v", err)
+		return fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
 	}
 	return nil
 }
