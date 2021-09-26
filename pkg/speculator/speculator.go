@@ -28,14 +28,21 @@ import (
 
 type SpecKey string
 
-type Speculator struct {
-	Specs    map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
-	APIDiffs []*_spec.APIDiff
+type Config struct {
+	OperationGeneratorConfig *_spec.OperationGeneratorConfig
 }
 
-func CreateSpeculator() *Speculator {
+type Speculator struct {
+	Specs map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
+
+	config *Config
+}
+
+func CreateSpeculator(config *Config) *Speculator {
+	log.Infof("Creating Speculator. config=%v", config)
 	return &Speculator{
-		Specs: make(map[SpecKey]*_spec.Spec),
+		Specs:  make(map[SpecKey]*_spec.Spec),
+		config: config,
 	}
 }
 
@@ -94,7 +101,7 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.SCNTelemetry) error {
 	}
 	specKey := GetSpecKey(telemetry.SCNTRequest.Host, destInfo.Port)
 	if _, ok := s.Specs[specKey]; !ok {
-		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.SCNTRequest.Host, destInfo.Port)
+		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.SCNTRequest.Host, destInfo.Port, s.config.OperationGeneratorConfig)
 	}
 	spec := s.Specs[specKey]
 	if err := spec.LearnTelemetry(telemetry); err != nil {

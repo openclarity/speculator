@@ -131,7 +131,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := CreateDefaultSpec("host", "80")
+			s := CreateDefaultSpec("host", "80", testOperationGeneratorConfig)
 			for _, telemetry := range tt.args.telemetries {
 				// file, _ := json.MarshalIndent(telemetry, "", " ")
 

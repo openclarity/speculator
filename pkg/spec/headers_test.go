@@ -23,6 +23,11 @@ import (
 )
 
 func Test_shouldIgnoreHeader(t *testing.T) {
+	var ignoredHeaders = map[string]struct{}{
+		contentTypeHeaderName:       {},
+		acceptTypeHeaderName:        {},
+		authorizationTypeHeaderName: {},
+	}
 	type args struct {
 		headerKey string
 	}
@@ -62,7 +67,7 @@ func Test_shouldIgnoreHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldIgnoreHeader(tt.args.headerKey); got != tt.want {
+			if got := shouldIgnoreHeader(ignoredHeaders, tt.args.headerKey); got != tt.want {
 				t.Errorf("shouldIgnoreHeader() = %v, want %v", got, tt.want)
 			}
 		})
@@ -70,6 +75,9 @@ func Test_shouldIgnoreHeader(t *testing.T) {
 }
 
 func Test_addResponseHeader(t *testing.T) {
+	op := NewOperationGenerator(&OperationGeneratorConfig{
+		ResponseHeadersToIgnore:  []string{acceptTypeHeaderName},
+	})
 	type args struct {
 		response    *spec.Response
 		headerKey   string
@@ -123,7 +131,7 @@ func Test_addResponseHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := addResponseHeader(tt.args.response, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
+			if got := op.addResponseHeader(tt.args.response, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("addResponseHeader() = %v, want %v", marshal(got), marshal(tt.want))
 			}
 		})
@@ -131,6 +139,9 @@ func Test_addResponseHeader(t *testing.T) {
 }
 
 func Test_addHeaderParam(t *testing.T) {
+	op := NewOperationGenerator(&OperationGeneratorConfig{
+		RequestHeadersToIgnore:  []string{acceptTypeHeaderName},
+	})
 	type args struct {
 		operation   *spec.Operation
 		headerKey   string
@@ -173,7 +184,7 @@ func Test_addHeaderParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := addHeaderParam(tt.args.operation, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
+			if got := op.addHeaderParam(tt.args.operation, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("addHeaderParam() = %v, want %v", got, tt.want)
 			}
 		})

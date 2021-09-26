@@ -35,6 +35,8 @@ import (
 type Spec struct {
 	SpecInfo
 
+	opGenerator *OperationGenerator
+
 	lock sync.Mutex
 }
 
@@ -115,7 +117,7 @@ func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 	method := telemetry.SCNTRequest.Method
 	// remove query params if exists
 	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
-	telemetryOp, err := telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
+	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
 	if err != nil {
 		return fmt.Errorf("failed to convert telemetry to operation. %v", err)
 	}

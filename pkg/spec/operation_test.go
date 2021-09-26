@@ -44,7 +44,8 @@ func generateQueryParams(t *testing.T, query string) url.Values {
 
 func TestGenerateSpecOperation(t *testing.T) {
 	sd := spec.SecurityDefinitions{}
-	operation, err := GenerateSpecOperation(&HTTPInteractionData{
+	opGen := CreateTestNewOperationGenerator()
+	operation, err := opGen.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:  agentStatusBody,
 		RespBody: cvssBody,
 		ReqHeaders: map[string]string{
@@ -82,6 +83,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 	type args struct {
 		data *HTTPInteractionData
 	}
+	opGen := CreateTestNewOperationGenerator()
 	tests := []struct {
 		name       string
 		args       args
@@ -180,7 +182,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sd := spec.SecurityDefinitions{}
-			got, err := GenerateSpecOperation(tt.args.data, sd)
+			got, err := opGen.GenerateSpecOperation(tt.args.data, sd)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateSpecOperation() error = %v, wantErr %v", err, tt.wantErr)
 				return

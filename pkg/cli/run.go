@@ -17,6 +17,7 @@ package cli
 
 import (
 	"encoding/json"
+	"github.com/spf13/viper"
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ func Run(c *cli.Context) {
 			log.Fatalf("Failed to decode stored state in path %v", statePath)
 		}
 	} else {
-		s = speculator.CreateSpeculator()
+		s = speculator.CreateSpeculator(createSpeculatorConfig())
 	}
 	fileNames := c.StringSlice("t")
 
@@ -69,5 +70,14 @@ func Run(c *cli.Context) {
 		if err := s.EncodeState(c.String("save")); err != nil {
 			log.Fatalf("Failed to encode speculator: %v", err)
 		}
+	}
+}
+
+func createSpeculatorConfig() *speculator.Config {
+	return &speculator.Config{
+		OperationGeneratorConfig: &spec.OperationGeneratorConfig{
+			ResponseHeadersToIgnore: viper.GetStringSlice("RESPONSE_HEADERS_TO_IGNORE"),
+			RequestHeadersToIgnore:  viper.GetStringSlice("REQUEST_HEADERS_TO_IGNORE"),
+		},
 	}
 }

@@ -18,6 +18,7 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/apiclarity/speculator/pkg/utils/slice"
 	"mime"
 	"net/url"
 	"strings"
@@ -178,8 +179,25 @@ func (h *HTTPInteractionData) getRespContentType() string {
 	return h.RespHeaders[contentTypeHeaderName]
 }
 
+type OperationGeneratorConfig struct {
+	ResponseHeadersToIgnore []string
+	RequestHeadersToIgnore  []string
+}
+
+type OperationGenerator struct {
+	responseHeadersToIgnore map[string]struct{}
+	requestHeadersToIgnore map[string]struct{}
+}
+
+func NewOperationGenerator(config *OperationGeneratorConfig) *OperationGenerator {
+	return &OperationGenerator{
+		responseHeadersToIgnore: slice.ToLowerKeyMap(config.ResponseHeadersToIgnore),
+		requestHeadersToIgnore:  slice.ToLowerKeyMap(config.RequestHeadersToIgnore),
+	}
+}
+
 // Note: securityDefinitions might be updated.
-func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.SecurityDefinitions) (*spec.Operation, error) {
+func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.SecurityDefinitions) (*spec.Operation, error) {
 	operation := spec.NewOperation("")
 
 	if len(data.ReqBody) > 0 {
@@ -225,7 +243,7 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 		if strings.ToLower(key) == authorizationTypeHeaderName {
 			operation, securityDefinitions = handleAuthReqHeader(operation, securityDefinitions, value)
 		} else {
-			operation = addHeaderParam(operation, key, value)
+			operation = o.addHeaderParam(operation, key, value)
 		}
 	}
 
@@ -271,7 +289,7 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 	}
 
 	for key, value := range data.RespHeaders {
-		response = addResponseHeader(response, key, value)
+		response = o.addResponseHeader(response, key, value)
 	}
 
 	operation.RespondsWith(data.statusCode, response).

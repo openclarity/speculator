@@ -67,11 +67,11 @@ type DiffParams struct {
 	response  SCNTResponse
 }
 
-func createDiffParamsFromTelemetry(telemetry *SCNTelemetry) (*DiffParams, error) {
+func (s *Spec) createDiffParamsFromTelemetry(telemetry *SCNTelemetry) (*DiffParams, error) {
 	securityDefinitions := oapi_spec.SecurityDefinitions{}
 
 	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
-	telemetryOp, err := telemetryToOperation(telemetry, securityDefinitions)
+	telemetryOp, err := s.telemetryToOperation(telemetry, securityDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert telemetry to operation: %w", err)
 	}
@@ -90,7 +90,7 @@ func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*A
 
 	var apiDiff *APIDiff
 	var err error
-	diffParams, err := createDiffParamsFromTelemetry(telemetry)
+	diffParams, err := s.createDiffParamsFromTelemetry(telemetry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create diff params from telemetry. %w", err)
 	}

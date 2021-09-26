@@ -93,6 +93,7 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 	defer s.lock.Unlock()
 
 	// first update the review into a copy of the state, in case the validation will fail
+	// TODO: should we not clone only spec info?
 	clonedSpec, err := s.Clone()
 	if err != nil {
 		return fmt.Errorf("failed to clone spec. %v", err)
