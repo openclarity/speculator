@@ -115,7 +115,15 @@ func (s *Spec) UnsetApprovedSpec() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.ApprovedSpec = nil
+	s.ApprovedSpec =  &ApprovedSpec{
+		PathItems:           map[string]*oapi_spec.PathItem{},
+		SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{},
+	}
+	s.LearningSpec = &LearningSpec{
+		PathItems:           map[string]*oapi_spec.PathItem{},
+		SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{},
+	}
+	s.ApprovedPathTrie = pathtrie.New()
 }
 
 func (s *Spec) UnsetProvidedSpec() {
@@ -123,6 +131,7 @@ func (s *Spec) UnsetProvidedSpec() {
 	defer s.lock.Unlock()
 
 	s.ProvidedSpec = nil
+	s.ProvidedPathTrie = pathtrie.New()
 }
 
 func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
