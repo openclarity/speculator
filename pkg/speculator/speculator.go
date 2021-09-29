@@ -163,6 +163,15 @@ func (s *Speculator) UnsetProvidedSpec(key SpecKey) error {
 	return nil
 }
 
+func (s *Speculator) UnsetApprovedSpec(key SpecKey) error {
+	spec, ok := s.Specs[key]
+	if !ok {
+		return fmt.Errorf("no spec found with key: %v", key)
+	}
+	spec.UnsetApprovedSpec()
+	return nil
+}
+
 func (s *Speculator) HasProvidedSpec(key SpecKey) bool {
 	spec, ok := s.Specs[key]
 	if !ok {

@@ -111,6 +111,20 @@ func (s *Spec) HasProvidedSpec() bool {
 	return true
 }
 
+func (s *Spec) UnsetApprovedSpec() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.ApprovedSpec = nil
+}
+
+func (s *Spec) UnsetProvidedSpec() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.ProvidedSpec = nil
+}
+
 func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
