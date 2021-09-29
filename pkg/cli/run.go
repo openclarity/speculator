@@ -17,10 +17,10 @@ package cli
 
 import (
 	"encoding/json"
-	"github.com/spf13/viper"
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 
 	"github.com/apiclarity/speculator/pkg/spec"
@@ -30,14 +30,16 @@ import (
 func Run(c *cli.Context) {
 	statePath := c.String("state")
 	var s *speculator.Speculator
+
+	speculatorConfig := createSpeculatorConfig()
 	if statePath != "" {
 		var err error
-		s, err = speculator.DecodeState(statePath)
+		s, err = speculator.DecodeState(statePath, speculatorConfig)
 		if err != nil {
 			log.Fatalf("Failed to decode stored state in path %v", statePath)
 		}
 	} else {
-		s = speculator.CreateSpeculator(createSpeculatorConfig())
+		s = speculator.CreateSpeculator(speculatorConfig)
 	}
 	fileNames := c.StringSlice("t")
 

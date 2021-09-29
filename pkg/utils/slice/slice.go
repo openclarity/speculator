@@ -15,8 +15,6 @@
 
 package slice
 
-import "strings"
-
 func RemoveStringDuplicates(slice []string) []string {
 	retMap := make(map[string]struct{})
 	var ret []string
@@ -26,16 +24,6 @@ func RemoveStringDuplicates(slice []string) []string {
 	}
 	for elem := range retMap {
 		ret = append(ret, elem)
-	}
-
-	return ret
-}
-
-func ToLowerKeyMap(slice []string) map[string]struct{} {
-	ret := make(map[string]struct{})
-
-	for _, s := range slice {
-		ret[strings.ToLower(s)] = struct{}{}
 	}
 
 	return ret

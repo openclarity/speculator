@@ -35,12 +35,12 @@ func (s *Spec) telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions
 		return nil, fmt.Errorf("failed to convert query params: %v", err)
 	}
 
-	if s.opGenerator == nil {
+	if s.OpGenerator == nil {
 		return nil, fmt.Errorf("operation generator was not set")
 	}
 
 	// Generate operation from telemetry
-	telemetryOp, err := s.opGenerator.GenerateSpecOperation(&HTTPInteractionData{
+	telemetryOp, err := s.OpGenerator.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     string(telemetry.SCNTRequest.Body),
 		RespBody:    string(telemetry.SCNTResponse.Body),
 		ReqHeaders:  ConvertHeadersToMap(telemetry.SCNTRequest.Headers),

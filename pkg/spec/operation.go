@@ -18,7 +18,6 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apiclarity/speculator/pkg/utils/slice"
 	"mime"
 	"net/url"
 	"strings"
@@ -185,14 +184,14 @@ type OperationGeneratorConfig struct {
 }
 
 type OperationGenerator struct {
-	responseHeadersToIgnore map[string]struct{}
-	requestHeadersToIgnore map[string]struct{}
+	ResponseHeadersToIgnore map[string]struct{}
+	RequestHeadersToIgnore  map[string]struct{}
 }
 
 func NewOperationGenerator(config OperationGeneratorConfig) *OperationGenerator {
 	return &OperationGenerator{
-		responseHeadersToIgnore: slice.ToLowerKeyMap(config.ResponseHeadersToIgnore),
-		requestHeadersToIgnore:  slice.ToLowerKeyMap(config.RequestHeadersToIgnore),
+		ResponseHeadersToIgnore: createHeadersToIgnore(config.ResponseHeadersToIgnore),
+		RequestHeadersToIgnore:  createHeadersToIgnore(config.RequestHeadersToIgnore),
 	}
 }
 

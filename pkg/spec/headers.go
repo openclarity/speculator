@@ -21,10 +21,16 @@ import (
 	"github.com/go-openapi/spec"
 )
 
-func (o *OperationGenerator) createHeadersToIgnore(headers []string) map[string]struct{} {
+var defaultIgnoredHeaders = []string{
+	contentTypeHeaderName,
+	acceptTypeHeaderName,
+	authorizationTypeHeaderName,
+}
+
+func createHeadersToIgnore(headers []string) map[string]struct{} {
 	ret := make(map[string]struct{})
 
-	for _, header := range headers {
+	for _, header := range append(defaultIgnoredHeaders, headers...) {
 		ret[strings.ToLower(header)] = struct{}{}
 	}
 
@@ -37,7 +43,7 @@ func shouldIgnoreHeader(headerToIgnore map[string]struct{}, headerKey string) bo
 }
 
 func (o *OperationGenerator) addResponseHeader(response *spec.Response, headerKey, headerValue string) *spec.Response {
-	if shouldIgnoreHeader(o.responseHeadersToIgnore, headerKey) {
+	if shouldIgnoreHeader(o.ResponseHeadersToIgnore, headerKey) {
 		return response
 	}
 
@@ -59,7 +65,7 @@ func (o *OperationGenerator) addResponseHeader(response *spec.Response, headerKe
 }
 
 func (o *OperationGenerator) addHeaderParam(operation *spec.Operation, headerKey, headerValue string) *spec.Operation {
-	if shouldIgnoreHeader(o.requestHeadersToIgnore, headerKey) {
+	if shouldIgnoreHeader(o.RequestHeadersToIgnore, headerKey) {
 		return operation
 	}
 

@@ -328,7 +328,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 					LearningSpec: tt.fields.LearningSpec,
 					PathTrie:     tt.fields.PathTrie,
 				},
-				opGenerator: CreateTestNewOperationGenerator(),
+				OpGenerator: CreateTestNewOperationGenerator(),
 			}
 			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceReconstructed)
 			if (err != nil) != tt.wantErr {
@@ -574,7 +574,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 					ID:           tt.fields.ID,
 					ProvidedSpec: tt.fields.ProvidedSpec,
 				},
-				opGenerator: CreateTestNewOperationGenerator(),
+				OpGenerator: CreateTestNewOperationGenerator(),
 			}
 			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceProvided)
 			if (err != nil) != tt.wantErr {

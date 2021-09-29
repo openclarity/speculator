@@ -36,7 +36,7 @@ func CreateDefaultSpec(host string, port string, config OperationGeneratorConfig
 			},
 			PathTrie: pathtrie.New(),
 		},
-		opGenerator: NewOperationGenerator(config),
+		OpGenerator: NewOperationGenerator(config),
 	}
 }
 

@@ -35,7 +35,7 @@ import (
 type Spec struct {
 	SpecInfo
 
-	opGenerator *OperationGenerator
+	OpGenerator *OperationGenerator
 
 	lock sync.Mutex
 }
@@ -198,7 +198,7 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	return ret, nil
 }
 
-func (s *Spec) Clone() (*Spec, error) {
+func (s *Spec) SpecInfoClone() (*Spec, error) {
 	var clonedSpecInfo SpecInfo
 
 	specB, err := json.Marshal(s.SpecInfo)

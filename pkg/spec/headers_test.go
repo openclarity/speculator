@@ -23,7 +23,7 @@ import (
 )
 
 func Test_shouldIgnoreHeader(t *testing.T) {
-	var ignoredHeaders = map[string]struct{}{
+	ignoredHeaders := map[string]struct{}{
 		contentTypeHeaderName:       {},
 		acceptTypeHeaderName:        {},
 		authorizationTypeHeaderName: {},
@@ -75,9 +75,7 @@ func Test_shouldIgnoreHeader(t *testing.T) {
 }
 
 func Test_addResponseHeader(t *testing.T) {
-	op := NewOperationGenerator(&OperationGeneratorConfig{
-		ResponseHeadersToIgnore:  []string{acceptTypeHeaderName},
-	})
+	op := NewOperationGenerator(OperationGeneratorConfig{})
 	type args struct {
 		response    *spec.Response
 		headerKey   string
@@ -139,9 +137,7 @@ func Test_addResponseHeader(t *testing.T) {
 }
 
 func Test_addHeaderParam(t *testing.T) {
-	op := NewOperationGenerator(&OperationGeneratorConfig{
-		RequestHeadersToIgnore:  []string{acceptTypeHeaderName},
-	})
+	op := NewOperationGenerator(OperationGeneratorConfig{})
 	type args struct {
 		operation   *spec.Operation
 		headerKey   string
@@ -186,6 +182,66 @@ func Test_addHeaderParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := op.addHeaderParam(tt.args.operation, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("addHeaderParam() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_createHeadersToIgnore(t *testing.T) {
+	type args struct {
+		headers []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]struct{}
+	}{
+		{
+			name: "only default headers",
+			args: args{
+				headers: nil,
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+			},
+		},
+		{
+			name: "with custom headers",
+			args: args{
+				headers: []string{
+					"X-H1",
+					"X-H2",
+				},
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+				"x-h1":                      {},
+				"x-h2":                      {},
+			},
+		},
+		{
+			name: "custom headers are sub list of the default headers",
+			args: args{
+				headers: []string{
+					acceptTypeHeaderName,
+					contentTypeHeaderName,
+				},
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := createHeadersToIgnore(tt.args.headers); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("createHeadersToIgnore() = %v, want %v", got, tt.want)
 			}
 		})
 	}
