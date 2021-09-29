@@ -154,6 +154,15 @@ func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte, pathToPa
 	return nil
 }
 
+func (s *Speculator) UnsetProvidedSpec(key SpecKey) error {
+	spec, ok := s.Specs[key]
+	if !ok {
+		return fmt.Errorf("no spec found with key: %v", key)
+	}
+	spec.UnsetProvidedSpec()
+	return nil
+}
+
 func (s *Speculator) HasProvidedSpec(key SpecKey) bool {
 	spec, ok := s.Specs[key]
 	if !ok {

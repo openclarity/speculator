@@ -73,3 +73,7 @@ func (p *ProvidedSpec) GetPathItem(path string) *oapispec.PathItem {
 	}
 	return nil
 }
+
+func (s *Spec) UnsetProvidedSpec() {
+	s.ProvidedSpec = nil
+}
