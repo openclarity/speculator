@@ -16,7 +16,10 @@
 package speculator
 
 import (
+	"os"
 	"testing"
+
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/apiclarity/speculator/pkg/spec"
 )
@@ -97,7 +100,10 @@ func TestGetHostAndPortFromSpecKey(t *testing.T) {
 
 func TestDecodeState(t *testing.T) {
 	testSpec := GetSpecKey("host", "port")
-	testStatePath := "/tmp/state.gob"
+	testStatePath := "/tmp/" + uuid.NewV4().String() + "state.gob"
+	defer func() {
+		_ = os.Remove(testStatePath)
+	}()
 
 	speculatorConfig := Config{
 		OperationGeneratorConfig: spec.OperationGeneratorConfig{
