@@ -138,9 +138,8 @@ func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 
 func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathItem *oapi_spec.PathItem
-	var pathNoBase string
 
-	pathNoBase = trimBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, diffParams.path)
+	pathNoBase := trimBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, diffParams.path)
 
 	pathFromTrie, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
 	if found {

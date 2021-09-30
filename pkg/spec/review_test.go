@@ -505,12 +505,12 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Spec{
 				SpecInfo: SpecInfo{
-					Host:         tt.fields.Host,
-					Port:         tt.fields.Port,
-					ID:           tt.fields.ID,
-					ApprovedSpec: tt.fields.ApprovedSpec,
-					LearningSpec: tt.fields.LearningSpec,
-					ApprovedPathTrie:     pathtrie.New(),
+					Host:             tt.fields.Host,
+					Port:             tt.fields.Port,
+					ID:               tt.fields.ID,
+					ApprovedSpec:     tt.fields.ApprovedSpec,
+					LearningSpec:     tt.fields.LearningSpec,
+					ApprovedPathTrie: pathtrie.New(),
 				},
 			}
 			err := s.ApplyApprovedReview(tt.args.approvedReviews)
