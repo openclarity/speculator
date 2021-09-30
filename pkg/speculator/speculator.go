@@ -28,14 +28,23 @@ import (
 
 type SpecKey string
 
-type Speculator struct {
-	Specs    map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
-	APIDiffs []*_spec.APIDiff
+type Config struct {
+	OperationGeneratorConfig _spec.OperationGeneratorConfig
 }
 
-func CreateSpeculator() *Speculator {
+type Speculator struct {
+	Specs map[SpecKey]*_spec.Spec `json:"specs,omitempty"`
+
+	// config is not exported and is not encoded part of the state
+	config Config
+}
+
+func CreateSpeculator(config Config) *Speculator {
+	log.Info("Creating Speculator")
+	log.Debugf("Speculator Config %+v", config)
 	return &Speculator{
-		Specs: make(map[SpecKey]*_spec.Spec),
+		Specs:  make(map[SpecKey]*_spec.Spec),
+		config: config,
 	}
 }
 
@@ -94,7 +103,7 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.SCNTelemetry) error {
 	}
 	specKey := GetSpecKey(telemetry.SCNTRequest.Host, destInfo.Port)
 	if _, ok := s.Specs[specKey]; !ok {
-		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.SCNTRequest.Host, destInfo.Port)
+		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.SCNTRequest.Host, destInfo.Port, s.config.OperationGeneratorConfig)
 	}
 	spec := s.Specs[specKey]
 	if err := spec.LearnTelemetry(telemetry); err != nil {
@@ -188,18 +197,24 @@ func (s *Speculator) EncodeState(filePath string) error {
 	return nil
 }
 
-func DecodeState(filePath string) (*Speculator, error) {
+func DecodeState(filePath string, config Config) (*Speculator, error) {
 	r := &Speculator{}
 	file, err := openFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file (%v): %v", filePath, err)
 	}
+	defer closeFile(file)
+
 	decoder := gob.NewDecoder(file)
 	err = decoder.Decode(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode state: %v", err)
 	}
-	closeFile(file)
+
+	r.config = config
+
+	log.Info("Speculator state was decoded")
+	log.Debugf("Speculator Config %+v", config)
 
 	return r, nil
 }

@@ -15,7 +15,14 @@
 
 package speculator
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	uuid "github.com/satori/go.uuid"
+
+	"github.com/apiclarity/speculator/pkg/spec"
+)
 
 func TestGetHostAndPortFromSpecKey(t *testing.T) {
 	type args struct {
@@ -88,5 +95,44 @@ func TestGetHostAndPortFromSpecKey(t *testing.T) {
 				t.Errorf("GetHostAndPortFromSpecKey() gotPort = %v, want %v", gotPort, tt.wantPort)
 			}
 		})
+	}
+}
+
+func TestDecodeState(t *testing.T) {
+	testSpec := GetSpecKey("host", "port")
+	testStatePath := "/tmp/" + uuid.NewV4().String() + "state.gob"
+	defer func() {
+		_ = os.Remove(testStatePath)
+	}()
+
+	speculatorConfig := Config{
+		OperationGeneratorConfig: spec.OperationGeneratorConfig{
+			ResponseHeadersToIgnore: []string{"before"},
+		},
+	}
+	speculator := CreateSpeculator(speculatorConfig)
+	speculator.Specs[testSpec] = spec.CreateDefaultSpec("host", "port", speculator.config.OperationGeneratorConfig)
+
+	if err := speculator.EncodeState(testStatePath); err != nil {
+		t.Errorf("EncodeState() error = %v", err)
+		return
+	}
+
+	newSpeculatorConfig := Config{
+		OperationGeneratorConfig: spec.OperationGeneratorConfig{
+			ResponseHeadersToIgnore: []string{"after"},
+		},
+	}
+	got, err := DecodeState(testStatePath, newSpeculatorConfig)
+	if err != nil {
+		t.Errorf("DecodeState() error = %v", err)
+		return
+	}
+
+	// OpGenerator on the decoded state should hold the previous OperationGeneratorConfig
+	responseHeadersToIgnore := got.Specs[testSpec].OpGenerator.ResponseHeadersToIgnore
+	if _, ok := responseHeadersToIgnore["before"]; !ok {
+		t.Errorf("ResponseHeadersToIgnore not as expected = %+v", responseHeadersToIgnore)
+		return
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 
 	"github.com/apiclarity/speculator/pkg/spec"
@@ -29,14 +30,16 @@ import (
 func Run(c *cli.Context) {
 	statePath := c.String("state")
 	var s *speculator.Speculator
+
+	speculatorConfig := createSpeculatorConfig()
 	if statePath != "" {
 		var err error
-		s, err = speculator.DecodeState(statePath)
+		s, err = speculator.DecodeState(statePath, speculatorConfig)
 		if err != nil {
 			log.Fatalf("Failed to decode stored state in path %v", statePath)
 		}
 	} else {
-		s = speculator.CreateSpeculator()
+		s = speculator.CreateSpeculator(speculatorConfig)
 	}
 	fileNames := c.StringSlice("t")
 
@@ -69,5 +72,14 @@ func Run(c *cli.Context) {
 		if err := s.EncodeState(c.String("save")); err != nil {
 			log.Fatalf("Failed to encode speculator: %v", err)
 		}
+	}
+}
+
+func createSpeculatorConfig() speculator.Config {
+	return speculator.Config{
+		OperationGeneratorConfig: spec.OperationGeneratorConfig{
+			ResponseHeadersToIgnore: viper.GetStringSlice("RESPONSE_HEADERS_TO_IGNORE"),
+			RequestHeadersToIgnore:  viper.GetStringSlice("REQUEST_HEADERS_TO_IGNORE"),
+		},
 	}
 }

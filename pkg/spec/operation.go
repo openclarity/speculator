@@ -178,8 +178,25 @@ func (h *HTTPInteractionData) getRespContentType() string {
 	return h.RespHeaders[contentTypeHeaderName]
 }
 
+type OperationGeneratorConfig struct {
+	ResponseHeadersToIgnore []string
+	RequestHeadersToIgnore  []string
+}
+
+type OperationGenerator struct {
+	ResponseHeadersToIgnore map[string]struct{}
+	RequestHeadersToIgnore  map[string]struct{}
+}
+
+func NewOperationGenerator(config OperationGeneratorConfig) *OperationGenerator {
+	return &OperationGenerator{
+		ResponseHeadersToIgnore: createHeadersToIgnore(config.ResponseHeadersToIgnore),
+		RequestHeadersToIgnore:  createHeadersToIgnore(config.RequestHeadersToIgnore),
+	}
+}
+
 // Note: securityDefinitions might be updated.
-func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.SecurityDefinitions) (*spec.Operation, error) {
+func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.SecurityDefinitions) (*spec.Operation, error) {
 	operation := spec.NewOperation("")
 
 	if len(data.ReqBody) > 0 {
@@ -225,7 +242,7 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 		if strings.ToLower(key) == authorizationTypeHeaderName {
 			operation, securityDefinitions = handleAuthReqHeader(operation, securityDefinitions, value)
 		} else {
-			operation = addHeaderParam(operation, key, value)
+			operation = o.addHeaderParam(operation, key, value)
 		}
 	}
 
@@ -271,7 +288,7 @@ func GenerateSpecOperation(data *HTTPInteractionData, securityDefinitions spec.S
 	}
 
 	for key, value := range data.RespHeaders {
-		response = addResponseHeader(response, key, value)
+		response = o.addResponseHeader(response, key, value)
 	}
 
 	operation.RespondsWith(data.statusCode, response).

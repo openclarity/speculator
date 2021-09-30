@@ -23,6 +23,11 @@ import (
 )
 
 func Test_shouldIgnoreHeader(t *testing.T) {
+	ignoredHeaders := map[string]struct{}{
+		contentTypeHeaderName:       {},
+		acceptTypeHeaderName:        {},
+		authorizationTypeHeaderName: {},
+	}
 	type args struct {
 		headerKey string
 	}
@@ -62,7 +67,7 @@ func Test_shouldIgnoreHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldIgnoreHeader(tt.args.headerKey); got != tt.want {
+			if got := shouldIgnoreHeader(ignoredHeaders, tt.args.headerKey); got != tt.want {
 				t.Errorf("shouldIgnoreHeader() = %v, want %v", got, tt.want)
 			}
 		})
@@ -70,6 +75,7 @@ func Test_shouldIgnoreHeader(t *testing.T) {
 }
 
 func Test_addResponseHeader(t *testing.T) {
+	op := NewOperationGenerator(OperationGeneratorConfig{})
 	type args struct {
 		response    *spec.Response
 		headerKey   string
@@ -123,7 +129,7 @@ func Test_addResponseHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := addResponseHeader(tt.args.response, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
+			if got := op.addResponseHeader(tt.args.response, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("addResponseHeader() = %v, want %v", marshal(got), marshal(tt.want))
 			}
 		})
@@ -131,6 +137,7 @@ func Test_addResponseHeader(t *testing.T) {
 }
 
 func Test_addHeaderParam(t *testing.T) {
+	op := NewOperationGenerator(OperationGeneratorConfig{})
 	type args struct {
 		operation   *spec.Operation
 		headerKey   string
@@ -173,8 +180,68 @@ func Test_addHeaderParam(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := addHeaderParam(tt.args.operation, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
+			if got := op.addHeaderParam(tt.args.operation, tt.args.headerKey, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("addHeaderParam() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_createHeadersToIgnore(t *testing.T) {
+	type args struct {
+		headers []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]struct{}
+	}{
+		{
+			name: "only default headers",
+			args: args{
+				headers: nil,
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+			},
+		},
+		{
+			name: "with custom headers",
+			args: args{
+				headers: []string{
+					"X-H1",
+					"X-H2",
+				},
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+				"x-h1":                      {},
+				"x-h2":                      {},
+			},
+		},
+		{
+			name: "custom headers are sub list of the default headers",
+			args: args{
+				headers: []string{
+					acceptTypeHeaderName,
+					contentTypeHeaderName,
+				},
+			},
+			want: map[string]struct{}{
+				acceptTypeHeaderName:        {},
+				contentTypeHeaderName:       {},
+				authorizationTypeHeaderName: {},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := createHeadersToIgnore(tt.args.headers); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("createHeadersToIgnore() = %v, want %v", got, tt.want)
 			}
 		})
 	}

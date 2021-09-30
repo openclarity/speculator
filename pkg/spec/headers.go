@@ -21,19 +21,29 @@ import (
 	"github.com/go-openapi/spec"
 )
 
-var ignoredHeaders = map[string]bool{
-	contentTypeHeaderName:       true,
-	acceptTypeHeaderName:        true,
-	authorizationTypeHeaderName: true,
+var defaultIgnoredHeaders = []string{
+	contentTypeHeaderName,
+	acceptTypeHeaderName,
+	authorizationTypeHeaderName,
 }
 
-// TODO: Do we want to support adding ignored headers via an env var?
-func shouldIgnoreHeader(headerKey string) bool {
-	return ignoredHeaders[strings.ToLower(headerKey)]
+func createHeadersToIgnore(headers []string) map[string]struct{} {
+	ret := make(map[string]struct{})
+
+	for _, header := range append(defaultIgnoredHeaders, headers...) {
+		ret[strings.ToLower(header)] = struct{}{}
+	}
+
+	return ret
 }
 
-func addResponseHeader(response *spec.Response, headerKey, headerValue string) *spec.Response {
-	if shouldIgnoreHeader(headerKey) {
+func shouldIgnoreHeader(headerToIgnore map[string]struct{}, headerKey string) bool {
+	_, ok := headerToIgnore[strings.ToLower(headerKey)]
+	return ok
+}
+
+func (o *OperationGenerator) addResponseHeader(response *spec.Response, headerKey, headerValue string) *spec.Response {
+	if shouldIgnoreHeader(o.ResponseHeadersToIgnore, headerKey) {
 		return response
 	}
 
@@ -54,8 +64,8 @@ func addResponseHeader(response *spec.Response, headerKey, headerValue string) *
 	return response.AddHeader(headerKey, responseHeader)
 }
 
-func addHeaderParam(operation *spec.Operation, headerKey, headerValue string) *spec.Operation {
-	if shouldIgnoreHeader(headerKey) {
+func (o *OperationGenerator) addHeaderParam(operation *spec.Operation, headerKey, headerValue string) *spec.Operation {
+	if shouldIgnoreHeader(o.RequestHeadersToIgnore, headerKey) {
 		return operation
 	}
 

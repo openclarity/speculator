@@ -26,7 +26,8 @@ import (
 
 func Test_merge(t *testing.T) {
 	sd := spec.SecurityDefinitions{}
-	op1, err := GenerateSpecOperation(&HTTPInteractionData{
+	op := CreateTestNewOperationGenerator()
+	op1, err := op.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req1,
 		RespBody:    res1,
 		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", contentTypeHeaderName: mediaTypeApplicationJSON},
@@ -34,7 +35,7 @@ func Test_merge(t *testing.T) {
 		statusCode:  200,
 	}, sd)
 	assert.NilError(t, err)
-	op2, err := GenerateSpecOperation(&HTTPInteractionData{
+	op2, err := op.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req2,
 		RespBody:    res2,
 		ReqHeaders:  map[string]string{"X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
@@ -43,7 +44,7 @@ func Test_merge(t *testing.T) {
 	}, sd)
 	assert.NilError(t, err)
 
-	combinedOp, err := GenerateSpecOperation(&HTTPInteractionData{
+	combinedOp, err := op.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     combinedReq,
 		RespBody:    combinedRes,
 		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", "X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},

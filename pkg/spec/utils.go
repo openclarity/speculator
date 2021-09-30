@@ -24,7 +24,7 @@ import (
 )
 
 // Note: securityDefinitions might be updated.
-func telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
+func (s *Spec) telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
 	statusCode, err := strconv.Atoi(telemetry.SCNTResponse.StatusCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert status code: %v. %v", statusCode, err)
@@ -35,8 +35,12 @@ func telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions oapi_spec
 		return nil, fmt.Errorf("failed to convert query params: %v", err)
 	}
 
+	if s.OpGenerator == nil {
+		return nil, fmt.Errorf("operation generator was not set")
+	}
+
 	// Generate operation from telemetry
-	telemetryOp, err := GenerateSpecOperation(&HTTPInteractionData{
+	telemetryOp, err := s.OpGenerator.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     string(telemetry.SCNTRequest.Body),
 		RespBody:    string(telemetry.SCNTResponse.Body),
 		ReqHeaders:  ConvertHeadersToMap(telemetry.SCNTRequest.Headers),

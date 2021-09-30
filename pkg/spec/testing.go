@@ -109,9 +109,18 @@ type TestOperation struct {
 func NewOperation(t *testing.T, data *HTTPInteractionData) *TestOperation {
 	t.Helper()
 	sd := oapi_spec.SecurityDefinitions{}
-	operation, err := GenerateSpecOperation(data, sd)
+	operation, err := CreateTestNewOperationGenerator().GenerateSpecOperation(data, sd)
 	assert.NilError(t, err)
 	return &TestOperation{
 		Op: operation,
 	}
+}
+
+func CreateTestNewOperationGenerator() *OperationGenerator {
+	return NewOperationGenerator(testOperationGeneratorConfig)
+}
+
+var testOperationGeneratorConfig = OperationGeneratorConfig{
+	ResponseHeadersToIgnore: []string{contentTypeHeaderName},
+	RequestHeadersToIgnore:  []string{acceptTypeHeaderName, authorizationTypeHeaderName, contentTypeHeaderName},
 }

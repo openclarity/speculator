@@ -131,7 +131,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := CreateDefaultSpec("host", "80")
+			s := CreateDefaultSpec("host", "80", testOperationGeneratorConfig)
 			for _, telemetry := range tt.args.telemetries {
 				// file, _ := json.MarshalIndent(telemetry, "", " ")
 
@@ -144,7 +144,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 	}
 }
 
-func TestSpec_Clone(t *testing.T) {
+func TestSpec_SpecInfoClone(t *testing.T) {
 	uuidVar := uuid.NewV4()
 	pathTrie := pathtrie.New()
 	pathTrie.Insert("/api", 1)
@@ -240,16 +240,16 @@ func TestSpec_Clone(t *testing.T) {
 					PathTrie:     tt.fields.PathTrie,
 				},
 			}
-			got, err := s.Clone()
+			got, err := s.SpecInfoClone()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Clone() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("SpecInfoClone() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			gotB, _ := json.Marshal(got)
 			wantB, _ := json.Marshal(tt.want)
 
 			if !bytes.Equal(gotB, wantB) {
-				t.Errorf("Clone() got = %s, want %s", gotB, wantB)
+				t.Errorf("SpecInfoClone() got = %s, want %s", gotB, wantB)
 			}
 		})
 	}

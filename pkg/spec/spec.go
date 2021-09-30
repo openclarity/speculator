@@ -35,6 +35,8 @@ import (
 type Spec struct {
 	SpecInfo
 
+	OpGenerator *OperationGenerator
+
 	lock sync.Mutex
 }
 
@@ -115,7 +117,7 @@ func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
 	method := telemetry.SCNTRequest.Method
 	// remove query params if exists
 	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
-	telemetryOp, err := telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
+	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
 	if err != nil {
 		return fmt.Errorf("failed to convert telemetry to operation. %v", err)
 	}
@@ -196,7 +198,7 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	return ret, nil
 }
 
-func (s *Spec) Clone() (*Spec, error) {
+func (s *Spec) SpecInfoClone() (*Spec, error) {
 	var clonedSpecInfo SpecInfo
 
 	specB, err := json.Marshal(s.SpecInfo)
