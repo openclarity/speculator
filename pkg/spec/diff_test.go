@@ -172,7 +172,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
-				Type:   DiffTypeChanged,
+				Type:   DiffTypeGeneralDiff,
 				Path:   "/api",
 				PathID: "1",
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
@@ -200,7 +200,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeNew,
+				Type:             DiffTypeShadowDiff,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -226,7 +226,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeShadowDiff,
 				Path:             "/api",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -253,7 +253,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -280,7 +280,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/{my-param}",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -308,7 +308,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/1",
 				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -417,7 +417,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
-				Type:   DiffTypeChanged,
+				Type:   DiffTypeGeneralDiff,
 				Path:   "/api",
 				PathID: "1",
 				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
@@ -451,7 +451,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeNew,
+				Type:             DiffTypeShadowDiff,
 				Path:             "/api/new",
 				OriginalPathItem: nil,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -483,7 +483,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeShadowDiff,
 				Path:             "/api",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -516,7 +516,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -550,7 +550,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/foo/{param}",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -584,7 +584,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/foo/bar",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -618,7 +618,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/{my-param}",
 				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -653,10 +653,77 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
 			},
 			want: &APIDiff{
-				Type:             DiffTypeChanged,
+				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/1",
 				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Deprecated API expected Zombie API diff",
+			fields: fields{
+				ID: specUUID,
+				ProvidedSpec: &ProvidedSpec{
+					Spec: &spec.Swagger{
+						SwaggerProps: spec.SwaggerProps{
+							Paths: &spec.Paths{
+								Paths: map[string]spec.PathItem{
+									"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
+								},
+							},
+						},
+					},
+				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
+			},
+			args: args{
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+			},
+			want: &APIDiff{
+				Type:   DiffTypeZombieDiff,
+				Path:   "/api",
+				PathID: "1",
+				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
+				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, Data).Deprecated().Op)).PathItem,
+				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, clearProduces(NewOperation(t, Data).Op)).PathItem,
+				InteractionID:    reqUUID,
+				SpecID:           specUUID,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Deprecated and simple diff expected Zombie API diff",
+			fields: fields{
+				ID: specUUID,
+				ProvidedSpec: &ProvidedSpec{
+					Spec: &spec.Swagger{
+						SwaggerProps: spec.SwaggerProps{
+							Paths: &spec.Paths{
+								Paths: map[string]spec.PathItem{
+									"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
+								},
+							},
+						},
+					},
+				},
+				ProvidedPathTrie: createPathTrie(map[string]string{
+					"/api": "1",
+				}),
+			},
+			args: args{
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+			},
+			want: &APIDiff{
+				Type:             DiffTypeZombieDiff,
+				Path:             "/api",
+				PathID:           "1",
+				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
 				SpecID:           specUUID,
