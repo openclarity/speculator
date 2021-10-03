@@ -1111,7 +1111,7 @@ func Test_addBasePathIfNeeded(t *testing.T) {
 		want string
 	}{
 		{
-			name: "no need to add bash path",
+			name: "no need to add base path",
 			args: args{
 				basePath: "",
 				path:     "/no-need",
@@ -1119,7 +1119,7 @@ func Test_addBasePathIfNeeded(t *testing.T) {
 			want: "/no-need",
 		},
 		{
-			name: "need to add bash path",
+			name: "need to add base path",
 			args: args{
 				basePath: "/api",
 				path:     "/need",
@@ -1147,7 +1147,7 @@ func Test_trimBasePathIfNeeded(t *testing.T) {
 		want string
 	}{
 		{
-			name: "no need to trim bash path",
+			name: "no need to trim base path",
 			args: args{
 				basePath: "",
 				path:     "/no-need",
@@ -1155,7 +1155,7 @@ func Test_trimBasePathIfNeeded(t *testing.T) {
 			want: "/no-need",
 		},
 		{
-			name: "need to trim bash path",
+			name: "need to trim base path",
 			args: args{
 				basePath: "/api",
 				path:     "/api/need",
