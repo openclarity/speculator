@@ -1059,3 +1059,115 @@ func Test_sortParameters(t *testing.T) {
 		})
 	}
 }
+
+func Test_hasBasePath(t *testing.T) {
+	type args struct {
+		basePath string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "empty base path",
+			args: args{
+				basePath: "",
+			},
+			want: false,
+		},
+		{
+			name: "slash base path",
+			args: args{
+				basePath: "/",
+			},
+			want: false,
+		},
+		{
+			name: "base path exist",
+			args: args{
+				basePath: "/api",
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := hasBasePath(tt.args.basePath); got != tt.want {
+				t.Errorf("hasBasePath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_addBasePathIfNeeded(t *testing.T) {
+	type args struct {
+		basePath string
+		path     string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "no need to add bash path",
+			args: args{
+				basePath: "",
+				path:     "/no-need",
+			},
+			want: "/no-need",
+		},
+		{
+			name: "need to add bash path",
+			args: args{
+				basePath: "/api",
+				path:     "/need",
+			},
+			want: "/api/need",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := addBasePathIfNeeded(tt.args.basePath, tt.args.path); got != tt.want {
+				t.Errorf("addBasePathIfNeeded() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_trimBasePathIfNeeded(t *testing.T) {
+	type args struct {
+		basePath string
+		path     string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "no need to trim bash path",
+			args: args{
+				basePath: "",
+				path:     "/no-need",
+			},
+			want: "/no-need",
+		},
+		{
+			name: "need to trim bash path",
+			args: args{
+				basePath: "/api",
+				path:     "/api/need",
+			},
+			want: "/need",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := trimBasePathIfNeeded(tt.args.basePath, tt.args.path); got != tt.want {
+				t.Errorf("trimBasePathIfNeeded() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
