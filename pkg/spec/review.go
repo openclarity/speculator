@@ -118,7 +118,7 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 		clonedSpec.ApprovedSpec.PathItems[pathItemReview.ParameterizedPath] = mergedPathItem
 
 		// add the modified path to the path tree
-		isNewPath := clonedSpec.PathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
+		isNewPath := clonedSpec.ApprovedPathTrie.Insert(pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		if !isNewPath {
 			log.Warnf("Path was updated, a new path should be created in a normal case. path=%v, uuid=%v", pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		}

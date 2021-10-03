@@ -22,13 +22,15 @@ import (
 	"github.com/ghodss/yaml"
 	oapispec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 type ProvidedSpec struct {
 	Spec *oapispec.Swagger
 }
 
-func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
+func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]string) error {
 	// Convert YAML to JSON. Since JSON is a subset of YAML, passing JSON through
 	// this method should be a no-op.
 	jsonSpec, err := yaml.YAMLToJSON(providedSpec)
@@ -54,5 +56,20 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte) error {
 		return fmt.Errorf("failed to unmarshal spec: %v", err)
 	}
 
+	// path trie need to be repopulated from start on each new spec
+	s.ProvidedPathTrie = pathtrie.New()
+	for path := range s.ProvidedSpec.Spec.Paths.Paths {
+		if pathID, ok := pathToPathID[path]; ok {
+			s.ProvidedPathTrie.Insert(path, pathID)
+		}
+	}
+
+	return nil
+}
+
+func (p *ProvidedSpec) GetPathItem(path string) *oapispec.PathItem {
+	if pi, ok := p.Spec.Paths.Paths[path]; ok {
+		return &pi
+	}
 	return nil
 }

@@ -123,7 +123,7 @@ func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*A
 
 func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathItem *oapi_spec.PathItem
-	pathFromTrie, value, found := s.PathTrie.GetPathAndValue(diffParams.path)
+	pathFromTrie, value, found := s.ApprovedPathTrie.GetPathAndValue(diffParams.path)
 	if found {
 		diffParams.path = pathFromTrie // The diff will show the parametrized path if matched and not the telemetry path
 		pathItem = s.ApprovedSpec.GetPathItem(pathFromTrie)
@@ -137,20 +137,45 @@ func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 }
 
 func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
-	var pathNoBase string
-	// for path /api/foo/bar and base path of /api, the path that will be saved in paths map will be /foo/bar
-	// All paths must start with a slash. We can't trim a leading slash.
-	if s.ProvidedSpec.Spec.BasePath != "" && s.ProvidedSpec.Spec.BasePath != "/" {
-		pathNoBase = strings.TrimPrefix(diffParams.path, s.ProvidedSpec.Spec.BasePath)
-	} else {
-		pathNoBase = diffParams.path
-	}
-	pathItem, ok := s.ProvidedSpec.Spec.Paths.Paths[pathNoBase]
-	if !ok {
-		return s.diffPathItem(nil, diffParams)
+	var pathItem *oapi_spec.PathItem
+
+	pathNoBase := trimBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, diffParams.path)
+
+	pathFromTrie, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
+	if found {
+		// The diff will show the parametrized path if matched and not the telemetry path
+		diffParams.path = addBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, pathFromTrie)
+		pathItem = s.ProvidedSpec.GetPathItem(pathFromTrie)
+		if pathID, ok := value.(string); !ok {
+			log.Warnf("value is not a string. %v", value)
+		} else {
+			diffParams.pathID = pathID
+		}
 	}
 
-	return s.diffPathItem(&pathItem, diffParams)
+	return s.diffPathItem(pathItem, diffParams)
+}
+
+// For path /api/foo/bar and base path of /api, the path that will be saved in paths map will be /foo/bar
+// All paths must start with a slash. We can't trim a leading slash.
+func trimBasePathIfNeeded(basePath, path string) string {
+	if hasBasePath(basePath) {
+		return strings.TrimPrefix(path, basePath)
+	}
+
+	return path
+}
+
+func addBasePathIfNeeded(basePath, path string) string {
+	if hasBasePath(basePath) {
+		return basePath + path
+	}
+
+	return path
+}
+
+func hasBasePath(basePath string) bool {
+	return basePath != "" && basePath != "/"
 }
 
 func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams) (*APIDiff, error) {

@@ -54,7 +54,8 @@ type SpecInfo struct {
 	// Upon learning, this will be updated (not the ApprovedSpec field)
 	LearningSpec *LearningSpec
 
-	PathTrie pathtrie.PathTrie
+	ApprovedPathTrie pathtrie.PathTrie
+	ProvidedPathTrie pathtrie.PathTrie
 }
 
 type LearningParametrizedPaths struct {
