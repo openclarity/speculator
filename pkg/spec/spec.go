@@ -115,7 +115,7 @@ func (s *Spec) UnsetApprovedSpec() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.ApprovedSpec =  &ApprovedSpec{
+	s.ApprovedSpec = &ApprovedSpec{
 		PathItems:           map[string]*oapi_spec.PathItem{},
 		SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{},
 	}
