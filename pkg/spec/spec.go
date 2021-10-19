@@ -67,12 +67,13 @@ type LearningParametrizedPaths struct {
 
 type (
 	SCNTelemetry struct {
-		RequestID          string       `json:"request_id"`
-		Scheme             string       `json:"scheme"`
-		DestinationAddress string       `json:"destination_address"`
-		SourceAddress      string       `json:"source_address"`
-		SCNTRequest        SCNTRequest  `json:"scnt_request"`
-		SCNTResponse       SCNTResponse `json:"scnt_response"`
+		RequestID            string       `json:"request_id"`
+		Scheme               string       `json:"scheme"`
+		DestinationAddress   string       `json:"destination_address"`
+		DestinationNamespace string       `json:"destination_namespace"`
+		SourceAddress        string       `json:"source_address"`
+		SCNTRequest          SCNTRequest  `json:"scnt_request"`
+		SCNTResponse         SCNTResponse `json:"scnt_response"`
 	}
 
 	SCNTRequest struct {
