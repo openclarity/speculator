@@ -18,9 +18,6 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
-	"time"
-
 	"github.com/ghodss/yaml"
 	"github.com/go-openapi/loads"
 	oapi_spec "github.com/go-openapi/spec"
@@ -28,6 +25,7 @@ import (
 	"github.com/go-openapi/validate"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"sync"
 
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 	"github.com/apiclarity/speculator/pkg/utils/errors"
@@ -90,11 +88,11 @@ type (
 	}
 
 	SCNTCommon struct {
-		Version       string      `json:"version"`
-		Headers       [][2]string `json:"headers"`
-		Body          []byte      `json:"body"`
-		TruncatedBody bool        `json:"truncated_body"`
-		Time          time.Time   `json:"time"`
+		Version       string          `json:"version"`
+		Headers       [][2]string     `json:"headers"`
+		Body          []byte          `json:"body"`
+		TruncatedBody bool            `json:"truncated_body"`
+		Time          strfmt.DateTime `json:"time"`
 	}
 )
 
