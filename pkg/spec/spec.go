@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/go-openapi/loads"
@@ -93,6 +94,7 @@ type (
 		Headers       [][2]string `json:"headers"`
 		Body          []byte      `json:"body"`
 		TruncatedBody bool        `json:"truncated_body"`
+		Time          time.Time   `json:"time"`
 	}
 )
 
