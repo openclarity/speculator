@@ -21,16 +21,18 @@ import (
 	"strings"
 
 	oapi_spec "github.com/go-openapi/spec"
+
+	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 )
 
 // Note: securityDefinitions might be updated.
-func (s *Spec) telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
-	statusCode, err := strconv.Atoi(telemetry.SCNTResponse.StatusCode)
+func (s *Spec) telemetryToOperation(telemetry *models.Telemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
+	statusCode, err := strconv.Atoi(telemetry.Response.StatusCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert status code: %v. %v", statusCode, err)
 	}
 
-	queryParams, err := extractQueryParams(telemetry.SCNTRequest.Path)
+	queryParams, err := extractQueryParams(telemetry.Request.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert query params: %v", err)
 	}
@@ -41,10 +43,10 @@ func (s *Spec) telemetryToOperation(telemetry *SCNTelemetry, securityDefinitions
 
 	// Generate operation from telemetry
 	telemetryOp, err := s.OpGenerator.GenerateSpecOperation(&HTTPInteractionData{
-		ReqBody:     string(telemetry.SCNTRequest.Body),
-		RespBody:    string(telemetry.SCNTResponse.Body),
-		ReqHeaders:  ConvertHeadersToMap(telemetry.SCNTRequest.Headers),
-		RespHeaders: ConvertHeadersToMap(telemetry.SCNTResponse.Headers),
+		ReqBody:     string(telemetry.Request.Common.Body),
+		RespBody:    string(telemetry.Response.Common.Body),
+		ReqHeaders:  ConvertHeadersToMap(telemetry.Request.Common.Headers),
+		RespHeaders: ConvertHeadersToMap(telemetry.Response.Common.Headers),
 		QueryParams: queryParams,
 		statusCode:  statusCode,
 	}, securityDefinitions)

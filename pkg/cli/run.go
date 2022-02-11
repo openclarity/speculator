@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 
+	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	"github.com/apiclarity/speculator/pkg/spec"
 	"github.com/apiclarity/speculator/pkg/speculator"
 )
@@ -52,19 +53,19 @@ func Run(c *cli.Context) {
 			log.Errorf("Failed to read from file: %v. %v", fileName, err)
 			continue
 		}
-		telemetry := &spec.SCNTelemetry{}
+		telemetry := &models.Telemetry{}
 		err = json.Unmarshal(telemetryB, telemetry)
 		if err != nil {
 			log.Errorf("Failed to unmarshal telemetry. %v", err)
 			continue
 		}
-		log.Infof("Learning HTTP interaction for %v %v%v", telemetry.SCNTRequest.Method, telemetry.SCNTRequest.Host, telemetry.SCNTRequest.Path)
+		log.Infof("Learning HTTP interaction for %v %v%v", telemetry.Request.Method, telemetry.Request.Host, telemetry.Request.Path)
 		err = s.LearnTelemetry(telemetry)
 		if err != nil {
 			log.Errorf("Failed to learn telemetry. %v", err)
 			continue
 		}
-		log.Infof("Learned HTTP interaction for %v %v%v", telemetry.SCNTRequest.Method, telemetry.SCNTRequest.Host, telemetry.SCNTRequest.Path)
+		log.Infof("Learned HTTP interaction for %v %v%v", telemetry.Request.Method, telemetry.Request.Host, telemetry.Request.Path)
 	}
 	log.Infof("Generating specs")
 	s.DumpSpecs()

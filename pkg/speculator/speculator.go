@@ -23,6 +23,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	_spec "github.com/apiclarity/speculator/pkg/spec"
 )
 
@@ -96,14 +97,14 @@ func GetAddressInfoFromAddress(address string) (*AddressInfo, error) {
 	}, nil
 }
 
-func (s *Speculator) LearnTelemetry(telemetry *_spec.SCNTelemetry) error {
+func (s *Speculator) LearnTelemetry(telemetry *models.Telemetry) error {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return fmt.Errorf("failed get destination info: %v", err)
 	}
-	specKey := GetSpecKey(telemetry.SCNTRequest.Host, destInfo.Port)
+	specKey := GetSpecKey(telemetry.Request.Host, destInfo.Port)
 	if _, ok := s.Specs[specKey]; !ok {
-		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.SCNTRequest.Host, destInfo.Port, s.config.OperationGeneratorConfig)
+		s.Specs[specKey] = _spec.CreateDefaultSpec(telemetry.Request.Host, destInfo.Port, s.config.OperationGeneratorConfig)
 	}
 	spec := s.Specs[specKey]
 	if err := spec.LearnTelemetry(telemetry); err != nil {
@@ -113,12 +114,12 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.SCNTelemetry) error {
 	return nil
 }
 
-func (s *Speculator) DiffTelemetry(telemetry *_spec.SCNTelemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
+func (s *Speculator) DiffTelemetry(telemetry *models.Telemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed get destination info: %v", err)
 	}
-	specKey := GetSpecKey(telemetry.SCNTRequest.Host, destInfo.Port)
+	specKey := GetSpecKey(telemetry.Request.Host, destInfo.Port)
 	spec, ok := s.Specs[specKey]
 	if !ok {
 		return nil, fmt.Errorf("no spec for key %v", specKey)

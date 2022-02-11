@@ -26,6 +26,8 @@ import (
 	oapi_spec "github.com/go-openapi/spec"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 )
 
 type DiffType string
@@ -65,27 +67,27 @@ type DiffParams struct {
 	path      string
 	pathID    string
 	requestID string
-	response  SCNTResponse
+	response  *models.Response
 }
 
-func (s *Spec) createDiffParamsFromTelemetry(telemetry *SCNTelemetry) (*DiffParams, error) {
+func (s *Spec) createDiffParamsFromTelemetry(telemetry *models.Telemetry) (*DiffParams, error) {
 	securityDefinitions := oapi_spec.SecurityDefinitions{}
 
-	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
+	path, _ := GetPathAndQuery(telemetry.Request.Path)
 	telemetryOp, err := s.telemetryToOperation(telemetry, securityDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert telemetry to operation: %w", err)
 	}
 	return &DiffParams{
 		operation: telemetryOp,
-		method:    telemetry.SCNTRequest.Method,
+		method:    telemetry.Request.Method,
 		path:      path,
 		requestID: telemetry.RequestID,
-		response:  telemetry.SCNTResponse,
+		response:  telemetry.Response,
 	}, nil
 }
 
-func (s *Spec) DiffTelemetry(telemetry *SCNTelemetry, diffSource DiffSource) (*APIDiff, error) {
+func (s *Spec) DiffTelemetry(telemetry *models.Telemetry, diffSource DiffSource) (*APIDiff, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -238,7 +240,7 @@ func createPathItemFromOperation(method string, operation *oapi_spec.Operation) 
 	return &pathItem
 }
 
-func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryResponse SCNTResponse) (*operationDiff, error) {
+func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryResponse *models.Response) (*operationDiff, error) {
 	clonedTelemetryOp, err := CloneOperation(telemetryOp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clone telemetry operation: %w", err)

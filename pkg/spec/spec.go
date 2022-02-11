@@ -28,6 +28,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 	"github.com/apiclarity/speculator/pkg/utils/errors"
 )
@@ -64,37 +65,6 @@ type LearningParametrizedPaths struct {
 	// non parameterized path will map to itself
 	Paths map[string]map[string]bool
 }
-
-type (
-	SCNTelemetry struct {
-		RequestID            string       `json:"request_id"`
-		Scheme               string       `json:"scheme"`
-		DestinationAddress   string       `json:"destination_address"`
-		DestinationNamespace string       `json:"destination_namespace"`
-		SourceAddress        string       `json:"source_address"`
-		SCNTRequest          SCNTRequest  `json:"scnt_request"`
-		SCNTResponse         SCNTResponse `json:"scnt_response"`
-	}
-
-	SCNTRequest struct {
-		Method string `json:"method"`
-		Path   string `json:"path"`
-		Host   string `json:"host"`
-		SCNTCommon
-	}
-
-	SCNTResponse struct {
-		StatusCode string `json:"status_code"`
-		SCNTCommon
-	}
-
-	SCNTCommon struct {
-		Version       string      `json:"version"`
-		Headers       [][2]string `json:"headers"`
-		Body          []byte      `json:"body"`
-		TruncatedBody bool        `json:"truncated_body"`
-	}
-)
 
 func (s *Spec) HasApprovedSpec() bool {
 	if s.ApprovedSpec == nil || len(s.ApprovedSpec.PathItems) == 0 {
@@ -135,13 +105,13 @@ func (s *Spec) UnsetProvidedSpec() {
 	s.ProvidedPathTrie = pathtrie.New()
 }
 
-func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
+func (s *Spec) LearnTelemetry(telemetry *models.Telemetry) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	method := telemetry.SCNTRequest.Method
+	method := telemetry.Request.Method
 	// remove query params if exists
-	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
+	path, _ := GetPathAndQuery(telemetry.Request.Path)
 	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
 	if err != nil {
 		return fmt.Errorf("failed to convert telemetry to operation. %v", err)
