@@ -23,7 +23,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	"github.com/apiclarity/speculator/pkg/spec"
 	"github.com/apiclarity/speculator/pkg/speculator"
 )
@@ -53,7 +52,7 @@ func Run(c *cli.Context) {
 			log.Errorf("Failed to read from file: %v. %v", fileName, err)
 			continue
 		}
-		telemetry := &models.Telemetry{}
+		telemetry := &spec.Telemetry{}
 		err = json.Unmarshal(telemetryB, telemetry)
 		if err != nil {
 			log.Errorf("Failed to unmarshal telemetry. %v", err)

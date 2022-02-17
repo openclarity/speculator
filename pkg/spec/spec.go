@@ -28,7 +28,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 	"github.com/apiclarity/speculator/pkg/utils/errors"
 )
@@ -64,6 +63,40 @@ type LearningParametrizedPaths struct {
 	// e.g: /api/{param1} -> /api/1, /api/2
 	// non parameterized path will map to itself
 	Paths map[string]map[string]bool
+}
+
+type Telemetry struct {
+	DestinationAddress   string    `json:"destinationAddress,omitempty"`
+	DestinationNamespace string    `json:"destinationNamespace,omitempty"`
+	Request              *Request  `json:"request,omitempty"`
+	RequestID            string    `json:"requestID,omitempty"`
+	Response             *Response `json:"response,omitempty"`
+	Scheme               string    `json:"scheme,omitempty"`
+	SourceAddress        string    `json:"sourceAddress,omitempty"`
+}
+
+type Request struct {
+	Common *Common `json:"common,omitempty"`
+	Host   string  `json:"host,omitempty"`
+	Method string  `json:"method,omitempty"`
+	Path   string  `json:"path,omitempty"`
+}
+
+type Response struct {
+	Common     *Common `json:"common,omitempty"`
+	StatusCode string  `json:"statusCode,omitempty"`
+}
+
+type Common struct {
+	TruncatedBody bool      `json:"TruncatedBody,omitempty"`
+	Body          string    `json:"body,omitempty"`
+	Headers       []*Header `json:"headers"`
+	Version       string    `json:"version,omitempty"`
+}
+
+type Header struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 func (s *Spec) HasApprovedSpec() bool {
@@ -105,7 +138,7 @@ func (s *Spec) UnsetProvidedSpec() {
 	s.ProvidedPathTrie = pathtrie.New()
 }
 
-func (s *Spec) LearnTelemetry(telemetry *models.Telemetry) error {
+func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

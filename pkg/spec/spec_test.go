@@ -24,14 +24,13 @@ import (
 	oapi_spec "github.com/go-openapi/spec"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	"github.com/apiclarity/speculator/pkg/pathtrie"
 )
 
 func TestSpec_LearnTelemetry(t *testing.T) {
 	type fields struct{}
 	type args struct {
-		telemetries []*models.Telemetry
+		telemetries []*Telemetry
 	}
 	tests := []struct {
 		name    string
@@ -43,37 +42,37 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 			name:   "one",
 			fields: fields{},
 			args: args{
-				telemetries: []*models.Telemetry{
+				telemetries: []*Telemetry{
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						Request: &models.Request{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Headers: []*models.Header{
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,
 									},
 								},
-								Body:          []byte(req1),
+								Body:          req1,
 								TruncatedBody: false,
 							},
 						},
-						Response: &models.Response{
+						Response: &Response{
 							StatusCode: "200",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Headers: []*models.Header{
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,
 									},
 								},
-								Body:          []byte(res1),
+								Body:          res1,
 								TruncatedBody: false,
 							},
 						},
@@ -86,18 +85,18 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 			name:   "two",
 			fields: fields{},
 			args: args{
-				telemetries: []*models.Telemetry{
+				telemetries: []*Telemetry{
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						Request: &models.Request{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Body:    []byte(req1),
-								Headers: []*models.Header{
+								Body:    req1,
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,
@@ -110,12 +109,12 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 								TruncatedBody: false,
 							},
 						},
-						Response: &models.Response{
+						Response: &Response{
 							StatusCode: "200",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Body:    []byte(res1),
-								Headers: []*models.Header{
+								Body:    res1,
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,
@@ -132,14 +131,14 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						Request: &models.Request{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Body:    []byte(req2),
-								Headers: []*models.Header{
+								Body:    req2,
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,
@@ -152,12 +151,12 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 								TruncatedBody: false,
 							},
 						},
-						Response: &models.Response{
+						Response: &Response{
 							StatusCode: "200",
-							Common: &models.Common{
+							Common: &Common{
 								Version: "1",
-								Body:    []byte(res2),
-								Headers: []*models.Header{
+								Body:    res2,
+								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
 										Value: mediaTypeApplicationJSON,

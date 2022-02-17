@@ -23,7 +23,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 	_spec "github.com/apiclarity/speculator/pkg/spec"
 )
 
@@ -97,7 +96,7 @@ func GetAddressInfoFromAddress(address string) (*AddressInfo, error) {
 	}, nil
 }
 
-func (s *Speculator) LearnTelemetry(telemetry *models.Telemetry) error {
+func (s *Speculator) LearnTelemetry(telemetry *_spec.Telemetry) error {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return fmt.Errorf("failed get destination info: %v", err)
@@ -114,7 +113,7 @@ func (s *Speculator) LearnTelemetry(telemetry *models.Telemetry) error {
 	return nil
 }
 
-func (s *Speculator) DiffTelemetry(telemetry *models.Telemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
+func (s *Speculator) DiffTelemetry(telemetry *_spec.Telemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed get destination info: %v", err)

@@ -21,12 +21,10 @@ import (
 	"strings"
 
 	oapi_spec "github.com/go-openapi/spec"
-
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 )
 
 // Note: securityDefinitions might be updated.
-func (s *Spec) telemetryToOperation(telemetry *models.Telemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
+func (s *Spec) telemetryToOperation(telemetry *Telemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
 	statusCode, err := strconv.Atoi(telemetry.Response.StatusCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert status code: %v. %v", statusCode, err)

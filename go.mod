@@ -3,9 +3,9 @@ module github.com/apiclarity/speculator
 go 1.15
 
 require (
-	github.com/apiclarity/apiclarity/plugins/api v0.0.0-20220203091418-7f512f875cdc
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/loads v0.21.0
+	github.com/go-openapi/runtime v0.21.0 // indirect
 	github.com/go-openapi/spec v0.20.4
 	github.com/go-openapi/strfmt v0.21.0
 	github.com/go-openapi/swag v0.19.15
@@ -21,6 +21,7 @@ require (
 	github.com/yudai/gojsondiff v1.0.0
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yudai/pp v2.0.1+incompatible // indirect
+	golang.org/x/net v0.0.0-20211101193420-4a448f8816b3 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/utils v0.0.0-20210722164352-7f3ee0f31471
 )

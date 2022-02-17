@@ -19,8 +19,6 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
-
-	"github.com/apiclarity/apiclarity/plugins/api/server/models"
 )
 
 var defaultIgnoredHeaders = []string{
@@ -76,7 +74,7 @@ func (o *OperationGenerator) addHeaderParam(operation *spec.Operation, headerKey
 	return operation.AddParam(populateParam(headerParam, []string{headerValue}, true))
 }
 
-func ConvertHeadersToMap(headers []*models.Header) map[string]string {
+func ConvertHeadersToMap(headers []*Header) map[string]string {
 	headersMap := make(map[string]string)
 
 	for _, header := range headers {
