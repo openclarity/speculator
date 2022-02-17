@@ -89,7 +89,7 @@ type Response struct {
 
 type Common struct {
 	TruncatedBody bool      `json:"TruncatedBody,omitempty"`
-	Body          string    `json:"body,omitempty"`
+	Body          []byte    `json:"body,omitempty"`
 	Headers       []*Header `json:"headers"`
 	Version       string    `json:"version,omitempty"`
 }

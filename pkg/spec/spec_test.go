@@ -58,7 +58,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 										Value: mediaTypeApplicationJSON,
 									},
 								},
-								Body:          req1,
+								Body:          []byte(req1),
 								TruncatedBody: false,
 							},
 						},
@@ -72,7 +72,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 										Value: mediaTypeApplicationJSON,
 									},
 								},
-								Body:          res1,
+								Body:          []byte(res1),
 								TruncatedBody: false,
 							},
 						},
@@ -95,7 +95,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							Host:   "www.example.com",
 							Common: &Common{
 								Version: "1",
-								Body:    req1,
+								Body:    []byte(req1),
 								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
@@ -113,7 +113,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							StatusCode: "200",
 							Common: &Common{
 								Version: "1",
-								Body:    res1,
+								Body:    []byte(res1),
 								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
@@ -137,7 +137,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							Host:   "www.example.com",
 							Common: &Common{
 								Version: "1",
-								Body:    req2,
+								Body:    []byte(req2),
 								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
@@ -155,7 +155,7 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 							StatusCode: "200",
 							Common: &Common{
 								Version: "1",
-								Body:    res2,
+								Body:    []byte(res2),
 								Headers: []*Header{
 									{
 										Key:   contentTypeHeaderName,
