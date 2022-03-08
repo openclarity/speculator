@@ -75,36 +75,49 @@ var DataCombined = &HTTPInteractionData{
 	statusCode: 200,
 }
 
-func createTelemetry(reqID, method, path, host, statusCode string, reqBody, respBody []byte) *SCNTelemetry {
-	return &SCNTelemetry{
+func createTelemetry(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
+	return &Telemetry{
 		RequestID: reqID,
 		Scheme:    "",
-		SCNTRequest: SCNTRequest{
+		Request: &Request{
 			Method: method,
 			Path:   path,
 			Host:   host,
-			SCNTCommon: SCNTCommon{
-				Version:       "",
-				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
-				Body:          reqBody,
+			Common: &Common{
+				Version: "",
+				Headers: []*Header{
+					{
+						Key:   contentTypeHeaderName,
+						Value: mediaTypeApplicationJSON,
+					},
+				},
+				Body:          []byte(reqBody),
 				TruncatedBody: false,
 			},
 		},
-		SCNTResponse: SCNTResponse{
+		Response: &Response{
 			StatusCode: statusCode,
-			SCNTCommon: SCNTCommon{
-				Version:       "",
-				Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
-				Body:          respBody,
+			Common: &Common{
+				Version: "",
+				Headers: []*Header{
+					{
+						Key:   contentTypeHeaderName,
+						Value: mediaTypeApplicationJSON,
+					},
+				},
+				Body:          []byte(respBody),
 				TruncatedBody: false,
 			},
 		},
 	}
 }
 
-func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody []byte) *SCNTelemetry {
+func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
 	telemetry := createTelemetry(reqID, method, path, host, statusCode, reqBody, respBody)
-	telemetry.SCNTRequest.Headers = append(telemetry.SCNTRequest.Headers, [2]string{authorizationTypeHeaderName, BearerAuthPrefix + "token"})
+	telemetry.Request.Common.Headers = append(telemetry.Request.Common.Headers, &Header{
+		Key:   authorizationTypeHeaderName,
+		Value: BearerAuthPrefix + "token",
+	})
 	return telemetry
 }
 
@@ -119,7 +132,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 		ApprovedPathTrie pathtrie.PathTrie
 	}
 	type args struct {
-		telemetry *SCNTelemetry
+		telemetry *Telemetry
 	}
 	tests := []struct {
 		name    string
@@ -142,7 +155,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
@@ -169,7 +182,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:   DiffTypeGeneralDiff,
@@ -197,7 +210,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
@@ -223,7 +236,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
@@ -250,7 +263,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -277,7 +290,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -305,7 +318,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -352,7 +365,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 		ProvidedPathTrie pathtrie.PathTrie
 	}
 	type args struct {
-		telemetry *SCNTelemetry
+		telemetry *Telemetry
 	}
 	tests := []struct {
 		name    string
@@ -381,7 +394,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
@@ -414,7 +427,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:   DiffTypeGeneralDiff,
@@ -448,7 +461,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/new", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
@@ -480,7 +493,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodPost, "/api", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
@@ -513,7 +526,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -547,7 +560,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/foo/bar", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/foo/bar", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -581,7 +594,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/foo/bar", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/foo/bar", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -615,7 +628,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/2", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -650,7 +663,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api/1", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
@@ -683,7 +696,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(Data.ReqBody), []byte(Data.RespBody)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
 				Type:   DiffTypeZombieDiff,
@@ -717,7 +730,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				}),
 			},
 			args: args{
-				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", []byte(req2), []byte(res2)),
+				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", req2, res2),
 			},
 			want: &APIDiff{
 				Type:             DiffTypeZombieDiff,
@@ -849,7 +862,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 	type args struct {
 		specOp            *spec.Operation
 		telemetryOp       *spec.Operation
-		telemetryResponse SCNTResponse
+		telemetryResponse *Response
 	}
 	tests := []struct {
 		name    string
@@ -866,7 +879,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				telemetryOp: spec.NewOperation("").
 					AddParam(spec.HeaderParam("header")).
 					RespondsWith(200, spec.ResponseRef("test")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -884,7 +897,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 					AddParam(spec.HeaderParam("header1")).
 					AddParam(spec.HeaderParam("header2")).
 					RespondsWith(200, spec.ResponseRef("test")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -901,7 +914,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				telemetryOp: spec.NewOperation("").
 					AddParam(spec.HeaderParam("header")).
 					RespondsWith(200, spec.ResponseRef("test")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -919,7 +932,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				telemetryOp: spec.NewOperation("").
 					AddParam(spec.HeaderParam("header")).
 					RespondsWith(403, spec.ResponseRef("keep")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "403",
 				},
 			},
@@ -935,7 +948,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				telemetryOp: spec.NewOperation("").
 					AddParam(spec.HeaderParam("new-header")).
 					RespondsWith(200, spec.ResponseRef("test")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -961,7 +974,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 					AddParam(spec.HeaderParam("new-header")).
 					RespondsWith(200, spec.ResponseRef("200")).
 					WithProduces("will-be-ignore"),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -987,7 +1000,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 					AddParam(spec.HeaderParam("new-header")).
 					RespondsWith(200, spec.ResponseRef("new-200")).
 					WithProduces("will-not-be-ignore"),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "200",
 				},
 			},
@@ -1012,7 +1025,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				telemetryOp: spec.NewOperation("").
 					AddParam(spec.HeaderParam("new-header")).
 					RespondsWith(200, spec.ResponseRef("test")),
-				telemetryResponse: SCNTResponse{
+				telemetryResponse: &Response{
 					StatusCode: "invalid",
 				},
 			},

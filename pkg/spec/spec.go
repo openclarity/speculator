@@ -65,36 +65,39 @@ type LearningParametrizedPaths struct {
 	Paths map[string]map[string]bool
 }
 
-type (
-	SCNTelemetry struct {
-		RequestID            string       `json:"request_id"`
-		Scheme               string       `json:"scheme"`
-		DestinationAddress   string       `json:"destination_address"`
-		DestinationNamespace string       `json:"destination_namespace"`
-		SourceAddress        string       `json:"source_address"`
-		SCNTRequest          SCNTRequest  `json:"scnt_request"`
-		SCNTResponse         SCNTResponse `json:"scnt_response"`
-	}
+type Telemetry struct {
+	DestinationAddress   string    `json:"destinationAddress,omitempty"`
+	DestinationNamespace string    `json:"destinationNamespace,omitempty"`
+	Request              *Request  `json:"request,omitempty"`
+	RequestID            string    `json:"requestID,omitempty"`
+	Response             *Response `json:"response,omitempty"`
+	Scheme               string    `json:"scheme,omitempty"`
+	SourceAddress        string    `json:"sourceAddress,omitempty"`
+}
 
-	SCNTRequest struct {
-		Method string `json:"method"`
-		Path   string `json:"path"`
-		Host   string `json:"host"`
-		SCNTCommon
-	}
+type Request struct {
+	Common *Common `json:"common,omitempty"`
+	Host   string  `json:"host,omitempty"`
+	Method string  `json:"method,omitempty"`
+	Path   string  `json:"path,omitempty"`
+}
 
-	SCNTResponse struct {
-		StatusCode string `json:"status_code"`
-		SCNTCommon
-	}
+type Response struct {
+	Common     *Common `json:"common,omitempty"`
+	StatusCode string  `json:"statusCode,omitempty"`
+}
 
-	SCNTCommon struct {
-		Version       string      `json:"version"`
-		Headers       [][2]string `json:"headers"`
-		Body          []byte      `json:"body"`
-		TruncatedBody bool        `json:"truncated_body"`
-	}
-)
+type Common struct {
+	TruncatedBody bool      `json:"TruncatedBody,omitempty"`
+	Body          []byte    `json:"body,omitempty"`
+	Headers       []*Header `json:"headers"`
+	Version       string    `json:"version,omitempty"`
+}
+
+type Header struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
+}
 
 func (s *Spec) HasApprovedSpec() bool {
 	if s.ApprovedSpec == nil || len(s.ApprovedSpec.PathItems) == 0 {
@@ -135,13 +138,13 @@ func (s *Spec) UnsetProvidedSpec() {
 	s.ProvidedPathTrie = pathtrie.New()
 }
 
-func (s *Spec) LearnTelemetry(telemetry *SCNTelemetry) error {
+func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	method := telemetry.SCNTRequest.Method
+	method := telemetry.Request.Method
 	// remove query params if exists
-	path, _ := GetPathAndQuery(telemetry.SCNTRequest.Path)
+	path, _ := GetPathAndQuery(telemetry.Request.Path)
 	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
 	if err != nil {
 		return fmt.Errorf("failed to convert telemetry to operation. %v", err)

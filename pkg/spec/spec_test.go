@@ -30,7 +30,7 @@ import (
 func TestSpec_LearnTelemetry(t *testing.T) {
 	type fields struct{}
 	type args struct {
-		telemetries []*SCNTelemetry
+		telemetries []*Telemetry
 	}
 	tests := []struct {
 		name    string
@@ -42,26 +42,36 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 			name:   "one",
 			fields: fields{},
 			args: args{
-				telemetries: []*SCNTelemetry{
+				telemetries: []*Telemetry{
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						SCNTRequest: SCNTRequest{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+								},
 								Body:          []byte(req1),
 								TruncatedBody: false,
 							},
 						},
-						SCNTResponse: SCNTResponse{
+						Response: &Response{
 							StatusCode: "200",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Headers:       [][2]string{{contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+								},
 								Body:          []byte(res1),
 								TruncatedBody: false,
 							},
@@ -75,27 +85,45 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 			name:   "two",
 			fields: fields{},
 			args: args{
-				telemetries: []*SCNTelemetry{
+				telemetries: []*Telemetry{
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						SCNTRequest: SCNTRequest{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Body:          []byte(req1),
-								Headers:       [][2]string{{"X-Test-Req-1", "req1"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Body:    []byte(req1),
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+									{
+										Key:   "X-Test-Req-1",
+										Value: "req1",
+									},
+								},
 								TruncatedBody: false,
 							},
 						},
-						SCNTResponse: SCNTResponse{
+						Response: &Response{
 							StatusCode: "200",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Body:          []byte(res1),
-								Headers:       [][2]string{{"X-Test-Res-1", "res1"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Body:    []byte(res1),
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+									{
+										Key:   "X-Test-Res-1",
+										Value: "res1",
+									},
+								},
 								TruncatedBody: false,
 							},
 						},
@@ -103,23 +131,41 @@ func TestSpec_LearnTelemetry(t *testing.T) {
 					{
 						RequestID: "req-id",
 						Scheme:    "http",
-						SCNTRequest: SCNTRequest{
+						Request: &Request{
 							Method: "GET",
 							Path:   "/some/path",
 							Host:   "www.example.com",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Body:          []byte(req2),
-								Headers:       [][2]string{{"X-Test-Req-2", "req2"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Body:    []byte(req2),
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+									{
+										Key:   "X-Test-Req-2",
+										Value: "req2",
+									},
+								},
 								TruncatedBody: false,
 							},
 						},
-						SCNTResponse: SCNTResponse{
+						Response: &Response{
 							StatusCode: "200",
-							SCNTCommon: SCNTCommon{
-								Version:       "1",
-								Body:          []byte(res2),
-								Headers:       [][2]string{{"X-Test-Res-2", "res2"}, {contentTypeHeaderName, mediaTypeApplicationJSON}},
+							Common: &Common{
+								Version: "1",
+								Body:    []byte(res2),
+								Headers: []*Header{
+									{
+										Key:   contentTypeHeaderName,
+										Value: mediaTypeApplicationJSON,
+									},
+									{
+										Key:   "X-Test-Res-2",
+										Value: "res2",
+									},
+								},
 								TruncatedBody: false,
 							},
 						},
