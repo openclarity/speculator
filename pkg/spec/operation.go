@@ -361,10 +361,10 @@ func addSecurity(op *spec.Operation, name string, scopes ...string) *spec.Operat
 	// We will treat multiple authentication types as an OR
 	// (Security schemes combined via OR are alternatives – any one can be used in the given context)
 
-	// We must use an empty array as the scopes, otherwise it will create invalid swagger
 	if len(scopes) > 0 {
 		return op.SecuredWith(name, scopes...)
 	} else {
+		// We must use an empty array as the scopes, otherwise it will create invalid swagger
 		return op.SecuredWith(name, []string{}...)
 	}
 }
