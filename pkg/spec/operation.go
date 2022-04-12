@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/xeipuuv/gojsonschema"
@@ -248,7 +249,13 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 
 	for key, values := range data.QueryParams {
 		if key == AccessTokenParamKey {
-			operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
+			ok := false
+			if len(values) > 0 {
+				operation, ok = handleAuthJWT(operation, values[len(values)-1])
+			}
+			if !ok {
+				operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
+			}
 			securityDefinitions = updateSecurityDefinitions(securityDefinitions, OAuth2SecurityDefinitionKey)
 		} else {
 			operation = addQueryParam(operation, key, values)
@@ -312,24 +319,52 @@ func CloneOperation(op *spec.Operation) (*spec.Operation, error) {
 	return &out, nil
 }
 
+func handleAuthJWT(operation *spec.Operation, bearerToken string) (*spec.Operation, bool) {
+	// Parse the claims without validating (since we don't want to bother downloading a key)
+	parser := jwt.Parser{}
+	token, _, err := parser.ParseUnverified(bearerToken, jwt.MapClaims{})
+	if err != nil {
+		return operation, false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return operation, false
+	}
+	if scope, ok := claims["scope"]; ok {
+		scopes := strings.Split(scope.(string), " ")
+		log.Debugf("Found scopes: %v", scopes)
+		return addSecurity(operation, OAuth2SecurityDefinitionKey, scopes...), true
+	}
+	log.Warnf("No scope defined in this token")
+	return addSecurity(operation, OAuth2SecurityDefinitionKey, []string{}...), true
+}
+
 func handleAuthReqHeader(operation *spec.Operation, sd spec.SecurityDefinitions, value string) (*spec.Operation, spec.SecurityDefinitions) {
 	if strings.HasPrefix(value, BasicAuthPrefix) {
 		operation = addSecurity(operation, BasicAuthSecurityDefinitionKey)
 		sd = updateSecurityDefinitions(sd, BasicAuthSecurityDefinitionKey)
 	} else if strings.HasPrefix(value, BearerAuthPrefix) {
-		operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
-		sd = updateSecurityDefinitions(sd, OAuth2SecurityDefinitionKey)
+		tokenString := strings.TrimPrefix(value, BearerAuthPrefix)
+		if len(tokenString) > 0 {
+			// Note: it might not be a JWT so we don't update in that case.
+			operation, _ = handleAuthJWT(operation, tokenString)
+			sd = updateSecurityDefinitions(sd, OAuth2SecurityDefinitionKey)
+		}
 	} else {
 		log.Warnf("ignoring unknown authorization header value (%v)", value)
 	}
 	return operation, sd
 }
 
-func addSecurity(op *spec.Operation, name string) *spec.Operation {
+func addSecurity(op *spec.Operation, name string, scopes ...string) *spec.Operation {
 	// https://swagger.io/docs/specification/2-0/authentication/
 	// We will treat multiple authentication types as an OR
 	// (Security schemes combined via OR are alternatives – any one can be used in the given context)
 
 	// We must use an empty array as the scopes, otherwise it will create invalid swagger
-	return op.SecuredWith(name, []string{}...)
+	if len(scopes) > 0 {
+		return op.SecuredWith(name, scopes...)
+	} else {
+		return op.SecuredWith(name, []string{}...)
+	}
 }

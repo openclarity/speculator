@@ -43,7 +43,7 @@ var DataWithAuth = &HTTPInteractionData{
 	RespBody: res1,
 	ReqHeaders: map[string]string{
 		contentTypeHeaderName:       mediaTypeApplicationJSON,
-		authorizationTypeHeaderName: BearerAuthPrefix + "token",
+		authorizationTypeHeaderName: BearerAuthPrefix,
 	},
 	RespHeaders: map[string]string{
 		contentTypeHeaderName: mediaTypeApplicationJSON,
@@ -73,6 +73,14 @@ var DataCombined = &HTTPInteractionData{
 		contentTypeHeaderName: mediaTypeApplicationJSON,
 	},
 	statusCode: 200,
+}
+
+const DiffOAuthScope string = "superadmin write:all_your_base"
+
+func init() {
+	// Update auth after init
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScope)
+	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 }
 
 func createTelemetry(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
@@ -113,10 +121,12 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 }
 
 func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScope)
+
 	telemetry := createTelemetry(reqID, method, path, host, statusCode, reqBody, respBody)
 	telemetry.Request.Common.Headers = append(telemetry.Request.Common.Headers, &Header{
 		Key:   authorizationTypeHeaderName,
-		Value: BearerAuthPrefix + "token",
+		Value: BearerAuthPrefix + bearerToken,
 	})
 	return telemetry
 }

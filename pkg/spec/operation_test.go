@@ -19,9 +19,13 @@ import (
 	"encoding/json"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/spec"
+	"github.com/golang-jwt/jwt/v4"
+	log "github.com/sirupsen/logrus"
 	"github.com/yudai/gojsondiff"
 	"gotest.tools/assert"
 )
@@ -34,6 +38,60 @@ var agentStatusBody = `{"active":true,
 "version":"1.147.1"}`
 
 var cvssBody = `{"cvss":[{"score":7.8,"vector":"AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H","version":"3"}]}`
+
+var defaultOAuth2BearerToken string = ""
+var defaultOAuth2Scopes []string = nil
+var defaultOAuth2JSON string = ""
+
+func init() {
+	defaultOAuth2BearerToken, defaultOAuth2Scopes = generateDefaultOAuthToken("admin write:pets")
+
+	encoded, err := json.Marshal(defaultOAuth2Scopes)
+	if err != nil {
+		log.Errorf("Cannot encode token scopes: %v", defaultOAuth2Scopes)
+	} else {
+		defaultOAuth2JSON = string(encoded)
+	}
+}
+
+func generateDefaultOAuthToken(scope string) (string, []string) {
+	mySigningKey := []byte("AllYourBase")
+	var err error = nil
+
+	var defaultOAuth2Claims jwt.Claims = OAuth2Claims{
+		scope,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "test",
+			Subject:   "somebody",
+			Audience:  []string{"somebody_else"},
+		},
+	}
+	var defaultScopes []string = []string{}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, defaultOAuth2Claims)
+	bearerToken, err := token.SignedString(mySigningKey)
+
+	if err != nil {
+		log.Errorf("Failed to create default OAuth2 Bearer Token: %v", err)
+		return bearerToken, defaultScopes
+	}
+
+	token, err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
+		return mySigningKey, nil
+	})
+
+	// Convert claims to scopes
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if scopes, ok := claims["scope"]; ok {
+			defaultScopes = strings.Split(scopes.(string), " ")
+		}
+	}
+
+	return bearerToken, defaultScopes
+}
 
 func generateQueryParams(t *testing.T, query string) url.Values {
 	t.Helper()
@@ -121,7 +179,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
 						contentTypeHeaderName:       mediaTypeApplicationJSON,
-						authorizationTypeHeaderName: BearerAuthPrefix + "=token",
+						authorizationTypeHeaderName: BearerAuthPrefix + defaultOAuth2BearerToken,
 					},
 					RespHeaders: map[string]string{
 						contentTypeHeaderName: mediaTypeApplicationJSON,
@@ -129,7 +187,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
 				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
@@ -147,11 +205,11 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					RespHeaders: map[string]string{
 						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
-					QueryParams: generateQueryParams(t, AccessTokenParamKey+"=token"),
+					QueryParams: generateQueryParams(t, AccessTokenParamKey+"="+defaultOAuth2BearerToken),
 					statusCode:  200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
 				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
@@ -161,7 +219,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			name: "OAuth 2.0 Form-Encoded Body Parameter",
 			args: args{
 				data: &HTTPInteractionData{
-					ReqBody:  AccessTokenParamKey + "=token&key=val",
+					ReqBody:  AccessTokenParamKey + "=" + defaultOAuth2BearerToken + "&key=val",
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
 						contentTypeHeaderName: mediaTypeApplicationForm,
@@ -172,7 +230,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":[]}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
 				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},
@@ -406,9 +464,9 @@ func Test_handleAuthReqHeader(t *testing.T) {
 			args: args{
 				operation: spec.NewOperation(""),
 				sd:        map[string]*spec.SecurityScheme{},
-				value:     BearerAuthPrefix + "token",
+				value:     BearerAuthPrefix + defaultOAuth2BearerToken,
 			},
-			wantOp: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, []string{}...),
+			wantOp: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, defaultOAuth2Scopes...),
 			wantSd: spec.SecurityDefinitions{
 				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
 			},

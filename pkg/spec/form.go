@@ -39,7 +39,13 @@ func addApplicationFormParams(operation *spec.Operation, sd spec.SecurityDefinit
 
 	for key, values := range values {
 		if key == AccessTokenParamKey {
-			operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
+			ok := false
+			if len(values) > 0 {
+				operation, ok = handleAuthJWT(operation, values[len(values)-1])
+			}
+			if !ok {
+				operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
+			}
 			sd = updateSecurityDefinitions(sd, OAuth2SecurityDefinitionKey)
 		} else {
 			operation.AddParam(populateParam(spec.FormDataParam(key), values, true))

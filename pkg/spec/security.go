@@ -17,8 +17,14 @@ package spec
 
 import (
 	"github.com/go-openapi/spec"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 )
+
+type OAuth2Claims struct {
+	Scope string `json:"scope"`
+	jwt.RegisteredClaims
+}
 
 const (
 	BasicAuthSecurityDefinitionKey  = "BasicAuth"
