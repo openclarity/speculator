@@ -96,6 +96,15 @@ func GetAddressInfoFromAddress(address string) (*AddressInfo, error) {
 	}, nil
 }
 
+func (s *Speculator) InitSpec(host, port string) error {
+	specKey := GetSpecKey(host, port)
+	if _, ok := s.Specs[specKey]; ok {
+		return fmt.Errorf("spec was already initialized using host and port: %s:%s", host, port)
+	}
+	s.Specs[specKey] = _spec.CreateDefaultSpec(host, port, s.config.OperationGeneratorConfig)
+	return nil
+}
+
 func (s *Speculator) LearnTelemetry(telemetry *_spec.Telemetry) error {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
