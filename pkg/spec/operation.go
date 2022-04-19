@@ -243,7 +243,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 		lowerKey := strings.ToLower(key)
 		if lowerKey == authorizationTypeHeaderName {
 			operation, securityDefinitions = handleAuthReqHeader(operation, securityDefinitions, value)
-		} else if ApiKeyNames[lowerKey] {
+		} else if APIKeyNames[lowerKey] {
 			sdName := APIKeyAuthSecurityDefinitionKey
 			operation = addSecurity(operation, sdName)
 			scheme := spec.APIKeyAuth(key, apiKeyInHeader)
@@ -274,7 +274,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 
 			operation, scheme = generateAuthBearerScheme(operation, values[0], sdName)
 			securityDefinitions = updateSecurityDefinitions(securityDefinitions, sdName, scheme)
-		} else if ApiKeyNames[lowerKey] {
+		} else if APIKeyNames[lowerKey] {
 			sdName := APIKeyAuthSecurityDefinitionKey
 			operation = addSecurity(operation, sdName)
 			scheme := spec.APIKeyAuth(key, apiKeyInQuery)

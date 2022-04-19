@@ -42,8 +42,8 @@ const (
 
 var (
 	// TODO: This should be runtime configurable, of course.
-	// Note: keys should be lower case
-	ApiKeyNames = map[string]bool{
+	// Note: keys should be lower case.
+	APIKeyNames = map[string]bool{
 		"key":     true, // Google
 		"api_key": true,
 	}
@@ -70,7 +70,7 @@ func updateSecurityDefinitionsFromOperation(sd spec.SecurityDefinitions, op *spe
 				scheme = spec.OAuth2AccessToken(authorizationURL, tknURL)
 			case APIKeyAuthSecurityDefinitionKey:
 				// Use random key since it is not specified
-				for key := range ApiKeyNames {
+				for key := range APIKeyNames {
 					scheme = spec.APIKeyAuth(key, apiKeyInHeader)
 					break
 				}

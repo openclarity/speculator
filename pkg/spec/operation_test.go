@@ -43,7 +43,7 @@ var defaultOAuth2Scopes []string = []string{"admin", "write:pets"}
 var defaultOAuth2BearerToken string = ""
 var defaultOAuth2JSON string = ""
 var defaultOAuthSecurityScheme *spec.SecurityScheme = nil
-var defaultApiKeyHeaderName = ""
+var defaultAPIKeyHeaderName = ""
 
 func init() {
 	defaultOAuth2BearerToken = generateDefaultOAuthToken(defaultOAuth2Scopes)
@@ -57,15 +57,14 @@ func init() {
 
 	defaultOAuthSecurityScheme = updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
 
-	for key := range ApiKeyNames {
-		defaultApiKeyHeaderName = key
+	for key := range APIKeyNames {
+		defaultAPIKeyHeaderName = key
 		break
 	}
 }
 
 func generateDefaultOAuthToken(scopes []string) string {
 	mySigningKey := []byte("AllYourBase")
-	var err error = nil
 
 	var defaultOAuth2Claims jwt.Claims = OAuth2Claims{
 		strings.Join(scopes, " "),
@@ -264,7 +263,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					RespBody: cvssBody,
 					ReqHeaders: map[string]string{
 						contentTypeHeaderName:   mediaTypeApplicationJSON,
-						defaultApiKeyHeaderName: "mybogusapikey",
+						defaultAPIKeyHeaderName: "mybogusapikey",
 					},
 					RespHeaders: map[string]string{
 						contentTypeHeaderName: mediaTypeApplicationJSON,
@@ -274,7 +273,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			},
 			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultApiKeyHeaderName, apiKeyInHeader),
+				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultAPIKeyHeaderName, apiKeyInHeader),
 			},
 			wantErr: false,
 		},
@@ -290,13 +289,13 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					RespHeaders: map[string]string{
 						contentTypeHeaderName: mediaTypeApplicationJSON,
 					},
-					QueryParams: generateQueryParams(t, defaultApiKeyHeaderName+"=mybogusapikey"),
+					QueryParams: generateQueryParams(t, defaultAPIKeyHeaderName+"=mybogusapikey"),
 					statusCode:  200,
 				},
 			},
 			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultApiKeyHeaderName, apiKeyInQuery),
+				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultAPIKeyHeaderName, apiKeyInQuery),
 			},
 			wantErr: false,
 		},
