@@ -39,12 +39,14 @@ var agentStatusBody = `{"active":true,
 
 var cvssBody = `{"cvss":[{"score":7.8,"vector":"AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H","version":"3"}]}`
 
+var defaultOAuth2Scopes []string = []string{"admin", "write:pets"}
 var defaultOAuth2BearerToken string = ""
-var defaultOAuth2Scopes []string = nil
 var defaultOAuth2JSON string = ""
+var defaultOAuthSecurityScheme *spec.SecurityScheme = nil
+var defaultApiKeyHeaderName = ""
 
 func init() {
-	defaultOAuth2BearerToken, defaultOAuth2Scopes = generateDefaultOAuthToken("admin write:pets")
+	defaultOAuth2BearerToken = generateDefaultOAuthToken(defaultOAuth2Scopes)
 
 	encoded, err := json.Marshal(defaultOAuth2Scopes)
 	if err != nil {
@@ -52,14 +54,21 @@ func init() {
 	} else {
 		defaultOAuth2JSON = string(encoded)
 	}
+
+	defaultOAuthSecurityScheme = updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
+
+	for key := range ApiKeyNames {
+		defaultApiKeyHeaderName = key
+		break
+	}
 }
 
-func generateDefaultOAuthToken(scope string) (string, []string) {
+func generateDefaultOAuthToken(scopes []string) string {
 	mySigningKey := []byte("AllYourBase")
 	var err error = nil
 
 	var defaultOAuth2Claims jwt.Claims = OAuth2Claims{
-		scope,
+		strings.Join(scopes, " "),
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -69,28 +78,15 @@ func generateDefaultOAuthToken(scope string) (string, []string) {
 			Audience:  []string{"somebody_else"},
 		},
 	}
-	var defaultScopes []string = []string{}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, defaultOAuth2Claims)
 	bearerToken, err := token.SignedString(mySigningKey)
-
 	if err != nil {
 		log.Errorf("Failed to create default OAuth2 Bearer Token: %v", err)
-		return bearerToken, defaultScopes
+		return bearerToken
 	}
 
-	token, err = jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
-		return mySigningKey, nil
-	})
-
-	// Convert claims to scopes
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		if scopes, ok := claims["scope"]; ok {
-			defaultScopes = strings.Split(scopes.(string), " ")
-		}
-	}
-
-	return bearerToken, defaultScopes
+	return bearerToken
 }
 
 func generateQueryParams(t *testing.T, query string) url.Values {
@@ -189,7 +185,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
 			},
 			wantErr: false,
 		},
@@ -211,7 +207,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
 			},
 			wantErr: false,
 		},
@@ -232,7 +228,75 @@ func TestGenerateSpecOperation1(t *testing.T) {
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
 			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			},
+			wantErr: false,
+		},
+		{
+			name: "OAuth 2.0 Multiple parameters: Authorization Req Header and URI Query Parameter",
+			args: args{
+				data: &HTTPInteractionData{
+					ReqBody:  agentStatusBody,
+					RespBody: cvssBody,
+					ReqHeaders: map[string]string{
+						contentTypeHeaderName:       mediaTypeApplicationJSON,
+						authorizationTypeHeaderName: BearerAuthPrefix + defaultOAuth2BearerToken,
+					},
+					RespHeaders: map[string]string{
+						contentTypeHeaderName: mediaTypeApplicationJSON,
+					},
+					QueryParams: generateQueryParams(t, AccessTokenParamKey+"=bogus.key.material"),
+					statusCode:  200,
+				},
+			},
+			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			expectedSd: spec.SecurityDefinitions{
+				// Note: Auth Header will be used before Query Parameter is ignored.
+				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			},
+			wantErr: false,
+		},
+		{
+			name: "API Key in header",
+			args: args{
+				data: &HTTPInteractionData{
+					ReqBody:  agentStatusBody,
+					RespBody: cvssBody,
+					ReqHeaders: map[string]string{
+						contentTypeHeaderName:   mediaTypeApplicationJSON,
+						defaultApiKeyHeaderName: "mybogusapikey",
+					},
+					RespHeaders: map[string]string{
+						contentTypeHeaderName: mediaTypeApplicationJSON,
+					},
+					statusCode: 200,
+				},
+			},
+			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			expectedSd: spec.SecurityDefinitions{
+				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultApiKeyHeaderName, apiKeyInHeader),
+			},
+			wantErr: false,
+		},
+		{
+			name: "API Key URI Query Parameter",
+			args: args{
+				data: &HTTPInteractionData{
+					ReqBody:  agentStatusBody,
+					RespBody: cvssBody,
+					ReqHeaders: map[string]string{
+						contentTypeHeaderName: mediaTypeApplicationJSON,
+					},
+					RespHeaders: map[string]string{
+						contentTypeHeaderName: mediaTypeApplicationJSON,
+					},
+					QueryParams: generateQueryParams(t, defaultApiKeyHeaderName+"=mybogusapikey"),
+					statusCode:  200,
+				},
+			},
+			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			expectedSd: spec.SecurityDefinitions{
+				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultApiKeyHeaderName, apiKeyInQuery),
 			},
 			wantErr: false,
 		},
@@ -468,7 +532,7 @@ func Test_handleAuthReqHeader(t *testing.T) {
 			},
 			wantOp: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, defaultOAuth2Scopes...),
 			wantSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
 			},
 		},
 		{

@@ -58,3 +58,8 @@ const (
 	mediaTypeApplicationForm    = "application/x-www-form-urlencoded"
 	mediaTypeMultipartFormData  = "multipart/form-data"
 )
+
+const (
+	apiKeyInHeader = "header"
+	apiKeyInQuery  = "query"
+)

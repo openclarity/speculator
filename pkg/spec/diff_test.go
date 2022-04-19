@@ -75,11 +75,11 @@ var DataCombined = &HTTPInteractionData{
 	statusCode: 200,
 }
 
-const DiffOAuthScope string = "superadmin write:all_your_base"
+var DiffOAuthScopes []string = []string{"superadmin", "write:all_your_base"}
 
 func init() {
 	// Update auth after init
-	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScope)
+	bearerToken := generateDefaultOAuthToken(DiffOAuthScopes)
 	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 }
 
@@ -121,7 +121,7 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 }
 
 func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
-	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScope)
+	bearerToken := generateDefaultOAuthToken(DiffOAuthScopes)
 
 	telemetry := createTelemetry(reqID, method, path, host, statusCode, reqBody, respBody)
 	telemetry.Request.Common.Headers = append(telemetry.Request.Common.Headers, &Header{

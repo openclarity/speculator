@@ -39,14 +39,20 @@ func addApplicationFormParams(operation *spec.Operation, sd spec.SecurityDefinit
 
 	for key, values := range values {
 		if key == AccessTokenParamKey {
-			ok := false
-			if len(values) > 0 {
-				operation, ok = handleAuthJWT(operation, values[len(values)-1])
+			// Use scheme as security definition name. For OAuth, we should consider checking
+			// supported scopes to allow multiple defs.
+			sdName := OAuth2SecurityDefinitionKey
+
+			if len(values) > 1 {
+				// RFC 6750 does not prohibit multiple tokens, but we do not know whether
+				// they would be AND or OR so we just pick the latest.
+				log.Warnf("Found %v tokens in form parameters, using only the last", len(values))
+				values = values[len(values)-1:]
 			}
-			if !ok {
-				operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
-			}
-			sd = updateSecurityDefinitions(sd, OAuth2SecurityDefinitionKey)
+
+			var scheme *spec.SecurityScheme
+			operation, scheme = generateAuthBearerScheme(operation, values[0], sdName)
+			sd = updateSecurityDefinitions(sd, sdName, scheme)
 		} else {
 			operation.AddParam(populateParam(spec.FormDataParam(key), values, true))
 		}

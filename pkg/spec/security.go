@@ -40,34 +40,77 @@ const (
 	authorizationURL = "https://example.com/oauth/authorize"
 )
 
+var (
+	// TODO: This should be runtime configurable, of course.
+	// Note: keys should be lower case
+	ApiKeyNames = map[string]bool{
+		"key":     true, // Google
+		"api_key": true,
+	}
+)
+
 func updateSecurityDefinitionsFromOperation(sd spec.SecurityDefinitions, op *spec.Operation) spec.SecurityDefinitions {
 	if op == nil {
 		return sd
 	}
 
+	// Note: usage goes in the other direction; i.e., the defs do contain more detail, and operations
+	// (security requirements) reference those definitions. The reference is required to be valid (i.e., the
+	// name in the operation MUST be present in the security defs) for OAuth spec v2.0.  Here we assume
+	// defs are generic to push the operation's security requirements into the general security definitions.
 	for _, securityGroup := range op.Security {
 		for sdKey := range securityGroup {
-			sd = updateSecurityDefinitions(sd, sdKey)
+			var scheme *spec.SecurityScheme
+			switch sdKey {
+			case BasicAuthSecurityDefinitionKey:
+				scheme = spec.BasicAuth()
+			case OAuth2SecurityDefinitionKey:
+				// we can't know the flow type (implicit, password, application or accessCode) so
+				// we choose accessCode for now
+				scheme = spec.OAuth2AccessToken(authorizationURL, tknURL)
+			case APIKeyAuthSecurityDefinitionKey:
+				// Use random key since it is not specified
+				for key := range ApiKeyNames {
+					scheme = spec.APIKeyAuth(key, apiKeyInHeader)
+					break
+				}
+			default:
+				log.Warnf("Unsupported security definition key: %v", sdKey)
+			}
+			sd = updateSecurityDefinitions(sd, sdKey, scheme)
 		}
 	}
 
 	return sd
 }
 
-func updateSecurityDefinitions(sd spec.SecurityDefinitions, sdKey string) spec.SecurityDefinitions {
+func updateSecurityDefinitions(sd spec.SecurityDefinitions, sdKey string, secScheme *spec.SecurityScheme) spec.SecurityDefinitions {
 	// we can override SecurityDefinitions if exists since it has the same key and value
 	switch sdKey {
-	case BasicAuthSecurityDefinitionKey:
-		sd[BasicAuthSecurityDefinitionKey] = spec.BasicAuth()
-	case OAuth2SecurityDefinitionKey:
-		// we can't know the flow type (implicit, password, application or accessCode) so we choose accessCode for now
-		sd[OAuth2SecurityDefinitionKey] = spec.OAuth2AccessToken(authorizationURL, tknURL)
-	// TODO: Add support for API Key
-	// case APIKeyAuthSecurityDefinitionKey:
-	//	spec.APIKeyAuth()
+	case BasicAuthSecurityDefinitionKey, OAuth2SecurityDefinitionKey, APIKeyAuthSecurityDefinitionKey:
+		sd[sdKey] = secScheme
 	default:
 		log.Warnf("Unsupported security definition key: %v", sdKey)
 	}
 
 	return sd
+}
+
+func updateSecuritySchemeScopes(sss *spec.SecurityScheme, scopes []string, descriptions []string) *spec.SecurityScheme {
+	if sss.Scopes == nil {
+		sss.Scopes = make(map[string]string)
+	}
+	if len(descriptions) > 0 {
+		if len(descriptions) < len(scopes) {
+			log.Errorf("too few descriptions (%v) supplied for security scheme scopes (%v)", len(descriptions), len(scopes))
+		}
+		for idx, scope := range scopes {
+			sss.Scopes[scope] = descriptions[idx]
+		}
+	} else {
+		for _, scope := range scopes {
+			sss.Scopes[scope] = ""
+		}
+	}
+	return sss
 }
