@@ -43,7 +43,7 @@ var DataWithAuth = &HTTPInteractionData{
 	RespBody: res1,
 	ReqHeaders: map[string]string{
 		contentTypeHeaderName:       mediaTypeApplicationJSON,
-		authorizationTypeHeaderName: BearerAuthPrefix + "token",
+		authorizationTypeHeaderName: BearerAuthPrefix,
 	},
 	RespHeaders: map[string]string{
 		contentTypeHeaderName: mediaTypeApplicationJSON,
@@ -74,6 +74,8 @@ var DataCombined = &HTTPInteractionData{
 	},
 	statusCode: 200,
 }
+
+var DiffOAuthScopes = []string{"superadmin", "write:all_your_base"}
 
 func createTelemetry(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
 	return &Telemetry{
@@ -113,10 +115,12 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 }
 
 func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
+
 	telemetry := createTelemetry(reqID, method, path, host, statusCode, reqBody, respBody)
 	telemetry.Request.Common.Headers = append(telemetry.Request.Common.Headers, &Header{
 		Key:   authorizationTypeHeaderName,
-		Value: BearerAuthPrefix + "token",
+		Value: BearerAuthPrefix + bearerToken,
 	})
 	return telemetry
 }
@@ -125,6 +129,8 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 	reqID := "req-id"
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
+	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 	type fields struct {
 		ID               uuid.UUID
 		ApprovedSpec     *ApprovedSpec
@@ -359,6 +365,8 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 	reqID := "req-id"
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
+	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 	type fields struct {
 		ID               uuid.UUID
 		ProvidedSpec     *ProvidedSpec

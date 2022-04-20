@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/go-openapi/spec"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"github.com/xeipuuv/gojsonschema"
@@ -239,17 +240,45 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 	}
 
 	for key, value := range data.ReqHeaders {
-		if strings.ToLower(key) == authorizationTypeHeaderName {
+		lowerKey := strings.ToLower(key)
+		if lowerKey == authorizationTypeHeaderName {
 			operation, securityDefinitions = handleAuthReqHeader(operation, securityDefinitions, value)
+		} else if APIKeyNames[lowerKey] {
+			sdName := APIKeyAuthSecurityDefinitionKey
+			operation = addSecurity(operation, sdName)
+			scheme := spec.APIKeyAuth(key, apiKeyInHeader)
+			securityDefinitions = updateSecurityDefinitions(securityDefinitions, sdName, scheme)
 		} else {
 			operation = o.addHeaderParam(operation, key, value)
 		}
 	}
 
 	for key, values := range data.QueryParams {
-		if key == AccessTokenParamKey {
-			operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
-			securityDefinitions = updateSecurityDefinitions(securityDefinitions, OAuth2SecurityDefinitionKey)
+		lowerKey := strings.ToLower(key)
+		if lowerKey == AccessTokenParamKey {
+			// Use scheme as security definition name
+			sdName := OAuth2SecurityDefinitionKey
+			var scheme *spec.SecurityScheme
+
+			if hasSecurity(operation, sdName) {
+				// RFC 6750 states multiple methods (form, uri query, header) cannot be used.
+				log.Errorf("OAuth tokens supplied with multiple methods, ignoring URI query param: %v", key)
+				continue
+			}
+			if len(values) > 1 {
+				// RFC 6750 does not prohibit multiple tokens, but we do not know whether
+				// they would be AND or OR so we just pick the latest.
+				log.Warnf("Found %v tokens in query parameters, using only the last", len(values))
+				values = values[len(values)-1:]
+			}
+
+			operation, scheme = generateAuthBearerScheme(operation, values[0], sdName)
+			securityDefinitions = updateSecurityDefinitions(securityDefinitions, sdName, scheme)
+		} else if APIKeyNames[lowerKey] {
+			sdName := APIKeyAuthSecurityDefinitionKey
+			operation = addSecurity(operation, sdName)
+			scheme := spec.APIKeyAuth(key, apiKeyInQuery)
+			securityDefinitions = updateSecurityDefinitions(securityDefinitions, sdName, scheme)
 		} else {
 			operation = addQueryParam(operation, key, values)
 		}
@@ -312,24 +341,83 @@ func CloneOperation(op *spec.Operation) (*spec.Operation, error) {
 	return &out, nil
 }
 
+func generateAuthBearerScheme(operation *spec.Operation, bearerToken string, sdName string) (*spec.Operation, *spec.SecurityScheme) {
+	// Parse the claims without validating (since we don't want to bother downloading a key)
+	parser := jwt.Parser{}
+	// we can't know the flow type (implicit, password, application or accessCode) so we choose accessCode for now
+	scheme := spec.OAuth2AccessToken(authorizationURL, tknURL)
+
+	if len(bearerToken) == 0 {
+		log.Warnf("authZ token provided with no value, assuming OAuth required anyway")
+		return addSecurity(operation, sdName), scheme
+	}
+
+	token, _, err := parser.ParseUnverified(bearerToken, jwt.MapClaims{})
+	if err != nil {
+		// Note: it is not a JWT so we just mark generic OAuth
+		log.Warnf("authZ token is not a JWT, assuming OAuth required anyway")
+		return addSecurity(operation, sdName), scheme
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		// Claims are unintelligible so we just mark generic OAuth
+		log.Warnf("authZ token had unintelligble claims, assuming OAuth required anyway")
+		return addSecurity(operation, sdName), scheme
+	}
+	scopes := []string{}
+	if scope, ok := claims["scope"]; ok {
+		scopes = strings.Split(scope.(string), " ")
+		log.Debugf("found OAuth token scopes: %v", scopes)
+	} else {
+		log.Warnf("no scopes defined in this token")
+	}
+	updateSecuritySchemeScopes(scheme, scopes, []string{})
+	return addSecurity(operation, sdName, scopes...), scheme
+}
+
 func handleAuthReqHeader(operation *spec.Operation, sd spec.SecurityDefinitions, value string) (*spec.Operation, spec.SecurityDefinitions) {
 	if strings.HasPrefix(value, BasicAuthPrefix) {
-		operation = addSecurity(operation, BasicAuthSecurityDefinitionKey)
-		sd = updateSecurityDefinitions(sd, BasicAuthSecurityDefinitionKey)
+		// Use scheme as security definition name
+		sdName := BasicAuthSecurityDefinitionKey
+		operation = addSecurity(operation, sdName)
+		sd = updateSecurityDefinitions(sd, sdName, spec.BasicAuth())
 	} else if strings.HasPrefix(value, BearerAuthPrefix) {
-		operation = addSecurity(operation, OAuth2SecurityDefinitionKey)
-		sd = updateSecurityDefinitions(sd, OAuth2SecurityDefinitionKey)
+		// Use scheme as security definition name. For OAuth, we should consider checking
+		// supported scopes to allow multiple defs.
+		sdName := OAuth2SecurityDefinitionKey
+
+		if hasSecurity(operation, sdName) {
+			// RFC 6750 states multiple methods (form, uri query, header) cannot be used.
+			log.Error("OAuth tokens supplied with multiple methods, ignoring header")
+			return operation, sd
+		}
+
+		var scheme *spec.SecurityScheme
+		operation, scheme = generateAuthBearerScheme(operation, strings.TrimPrefix(value, BearerAuthPrefix), sdName)
+		sd = updateSecurityDefinitions(sd, sdName, scheme)
 	} else {
 		log.Warnf("ignoring unknown authorization header value (%v)", value)
 	}
 	return operation, sd
 }
 
-func addSecurity(op *spec.Operation, name string) *spec.Operation {
+func addSecurity(op *spec.Operation, name string, scopes ...string) *spec.Operation {
 	// https://swagger.io/docs/specification/2-0/authentication/
 	// We will treat multiple authentication types as an OR
 	// (Security schemes combined via OR are alternatives – any one can be used in the given context)
+	if len(scopes) > 0 {
+		return op.SecuredWith(name, scopes...)
+	} else {
+		// We must use an empty array as the scopes, otherwise it will create invalid swagger
+		return op.SecuredWith(name, []string{}...)
+	}
+}
 
-	// We must use an empty array as the scopes, otherwise it will create invalid swagger
-	return op.SecuredWith(name, []string{}...)
+func hasSecurity(op *spec.Operation, name string) bool {
+	for _, securityScheme := range op.Security {
+		if _, ok := securityScheme[name]; ok {
+			return true
+		}
+	}
+	return false
 }
