@@ -75,13 +75,7 @@ var DataCombined = &HTTPInteractionData{
 	statusCode: 200,
 }
 
-var DiffOAuthScopes []string = []string{"superadmin", "write:all_your_base"}
-
-func init() {
-	// Update auth after init
-	bearerToken := generateDefaultOAuthToken(DiffOAuthScopes)
-	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
-}
+var DiffOAuthScopes = []string{"superadmin", "write:all_your_base"}
 
 func createTelemetry(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
 	return &Telemetry{
@@ -121,7 +115,7 @@ func createTelemetry(reqID, method, path, host, statusCode string, reqBody, resp
 }
 
 func createTelemetryWithSecurity(reqID, method, path, host, statusCode string, reqBody, respBody string) *Telemetry {
-	bearerToken := generateDefaultOAuthToken(DiffOAuthScopes)
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
 
 	telemetry := createTelemetry(reqID, method, path, host, statusCode, reqBody, respBody)
 	telemetry.Request.Common.Headers = append(telemetry.Request.Common.Headers, &Header{
@@ -135,6 +129,8 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 	reqID := "req-id"
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
+	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 	type fields struct {
 		ID               uuid.UUID
 		ApprovedSpec     *ApprovedSpec
@@ -369,6 +365,8 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 	reqID := "req-id"
 	reqUUID := uuid.NewV5(uuid.Nil, reqID)
 	specUUID := uuid.NewV5(uuid.Nil, "spec-id")
+	bearerToken, _ := generateDefaultOAuthToken(DiffOAuthScopes)
+	DataWithAuth.ReqHeaders[authorizationTypeHeaderName] = BearerAuthPrefix + bearerToken
 	type fields struct {
 		ID               uuid.UUID
 		ProvidedSpec     *ProvidedSpec

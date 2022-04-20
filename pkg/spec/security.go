@@ -40,14 +40,13 @@ const (
 	authorizationURL = "https://example.com/oauth/authorize"
 )
 
-var (
-	// TODO: This should be runtime configurable, of course.
-	// Note: keys should be lower case.
-	APIKeyNames = map[string]bool{
-		"key":     true, // Google
-		"api_key": true,
-	}
-)
+// APIKeyNames is set of names of headers or query params defining API keys.
+// This should be runtime configurable, of course.
+// Note: keys should be lower case.
+var APIKeyNames = map[string]bool{
+	"key":     true, // Google
+	"api_key": true,
+}
 
 func updateSecurityDefinitionsFromOperation(sd spec.SecurityDefinitions, op *spec.Operation) spec.SecurityDefinitions {
 	if op == nil {

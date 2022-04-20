@@ -39,31 +39,7 @@ var agentStatusBody = `{"active":true,
 
 var cvssBody = `{"cvss":[{"score":7.8,"vector":"AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H","version":"3"}]}`
 
-var defaultOAuth2Scopes []string = []string{"admin", "write:pets"}
-var defaultOAuth2BearerToken string = ""
-var defaultOAuth2JSON string = ""
-var defaultOAuthSecurityScheme *spec.SecurityScheme = nil
-var defaultAPIKeyHeaderName = ""
-
-func init() {
-	defaultOAuth2BearerToken = generateDefaultOAuthToken(defaultOAuth2Scopes)
-
-	encoded, err := json.Marshal(defaultOAuth2Scopes)
-	if err != nil {
-		log.Errorf("Cannot encode token scopes: %v", defaultOAuth2Scopes)
-	} else {
-		defaultOAuth2JSON = string(encoded)
-	}
-
-	defaultOAuthSecurityScheme = updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
-
-	for key := range APIKeyNames {
-		defaultAPIKeyHeaderName = key
-		break
-	}
-}
-
-func generateDefaultOAuthToken(scopes []string) string {
+func generateDefaultOAuthToken(scopes []string) (string, string) {
 	mySigningKey := []byte("AllYourBase")
 
 	var defaultOAuth2Claims jwt.Claims = OAuth2Claims{
@@ -82,10 +58,18 @@ func generateDefaultOAuthToken(scopes []string) string {
 	bearerToken, err := token.SignedString(mySigningKey)
 	if err != nil {
 		log.Errorf("Failed to create default OAuth2 Bearer Token: %v", err)
-		return bearerToken
+		return bearerToken, ""
 	}
 
-	return bearerToken
+	oAuth2JSON := ""
+	encoded, err := json.Marshal(scopes)
+	if err != nil {
+		log.Errorf("Cannot encode token scopes: %v", scopes)
+	} else {
+		oAuth2JSON = string(encoded)
+	}
+
+	return bearerToken, oAuth2JSON
 }
 
 func generateQueryParams(t *testing.T, query string) url.Values {
@@ -133,6 +117,14 @@ func validateOperation(t *testing.T, got *spec.Operation, want string) bool {
 }
 
 func TestGenerateSpecOperation1(t *testing.T) {
+	defaultOAuth2Scopes := []string{"admin", "write:pets"}
+	defaultOAuth2BearerToken, defaultOAuth2JSON := generateDefaultOAuthToken(defaultOAuth2Scopes)
+	defaultOAuthSecurityScheme := updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
+	defaultAPIKeyHeaderName := ""
+	for key := range APIKeyNames {
+		defaultAPIKeyHeaderName = key
+		break
+	}
 	type args struct {
 		data *HTTPInteractionData
 	}
@@ -516,6 +508,9 @@ func Test_handleAuthReqHeader(t *testing.T) {
 		sd        spec.SecurityDefinitions
 		value     string
 	}
+	defaultOAuth2Scopes := []string{"superman", "write:novel"}
+	defaultOAuth2BearerToken, _ := generateDefaultOAuthToken(defaultOAuth2Scopes)
+	defaultOAuthSecurityScheme := updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
 	tests := []struct {
 		name   string
 		args   args
