@@ -23,7 +23,7 @@ import (
 	oapispec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/openclarity/speculator/pkg/pathtrie"
 )
 
 type ProvidedSpec struct {

@@ -23,7 +23,7 @@ import (
 	oapi_spec "github.com/go-openapi/spec"
 	"gotest.tools/assert"
 
-	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/openclarity/speculator/pkg/pathtrie"
 )
 
 func TestSpec_LoadProvidedSpec(t *testing.T) {

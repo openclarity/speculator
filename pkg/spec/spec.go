@@ -28,8 +28,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apiclarity/speculator/pkg/pathtrie"
-	"github.com/apiclarity/speculator/pkg/utils/errors"
+	"github.com/openclarity/speculator/pkg/pathtrie"
+	"github.com/openclarity/speculator/pkg/utils/errors"
 )
 
 type Spec struct {

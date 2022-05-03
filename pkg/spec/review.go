@@ -22,7 +22,7 @@ import (
 	oapi_spec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/apiclarity/speculator/pkg/utils"
+	"github.com/openclarity/speculator/pkg/utils"
 )
 
 type SuggestedSpecReview struct {

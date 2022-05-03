@@ -28,7 +28,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"gotest.tools/assert"
 
-	"github.com/apiclarity/speculator/pkg/pathtrie"
+	"github.com/openclarity/speculator/pkg/pathtrie"
 )
 
 func TestSpec_ApplyApprovedReview(t *testing.T) {

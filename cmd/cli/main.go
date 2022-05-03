@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 
-	_cli "github.com/apiclarity/speculator/pkg/cli"
+	_cli "github.com/openclarity/speculator/pkg/cli"
 )
 
 func run(c *cli.Context) {

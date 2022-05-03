@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cast"
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/apiclarity/speculator/pkg/utils"
+	"github.com/openclarity/speculator/pkg/utils"
 )
 
 var (

@@ -21,7 +21,7 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/apiclarity/speculator/pkg/spec"
+	"github.com/openclarity/speculator/pkg/spec"
 )
 
 func TestGetHostAndPortFromSpecKey(t *testing.T) {

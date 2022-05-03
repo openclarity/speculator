@@ -1,4 +1,4 @@
-module github.com/apiclarity/speculator
+module github.com/openclarity/speculator
 
 go 1.15
 
