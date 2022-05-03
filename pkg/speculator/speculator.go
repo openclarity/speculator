@@ -23,7 +23,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	_spec "github.com/apiclarity/speculator/pkg/spec"
+	_spec "github.com/openclarity/speculator/pkg/spec"
 )
 
 type SpecKey string

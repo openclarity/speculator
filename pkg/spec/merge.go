@@ -22,8 +22,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/field"
 
-	"github.com/apiclarity/speculator/pkg/utils"
-	"github.com/apiclarity/speculator/pkg/utils/slice"
+	"github.com/openclarity/speculator/pkg/utils"
+	"github.com/openclarity/speculator/pkg/utils/slice"
 )
 
 var supportedParametersInTypes = []string{parametersInBody, parametersInHeader, parametersInQuery, parametersInForm, parametersInPath}

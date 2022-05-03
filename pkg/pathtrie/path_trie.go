@@ -19,7 +19,7 @@ package pathtrie
 import (
 	"strings"
 
-	"github.com/apiclarity/speculator/pkg/utils"
+	"github.com/openclarity/speculator/pkg/utils"
 )
 
 type TrieNode struct {
