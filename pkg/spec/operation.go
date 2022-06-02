@@ -220,7 +220,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 					return nil, fmt.Errorf("failed to get schema from request body. body=%v: %w", data.ReqBody, err)
 				}
 
-				operation.RequestBody.Value.WithJSONSchema(reqSchema)
+				operationSetRequestBody(operation, spec.NewRequestBody().WithJSONSchema(reqSchema))
 			case mediaType == mediaTypeApplicationForm:
 				operation, securitySchemes, err = handleApplicationFormURLEncodedBody(operation, securitySchemes, data.ReqBody)
 				if err != nil {
@@ -235,7 +235,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 				if err != nil {
 					return nil, fmt.Errorf("failed to get multipart form-data schema from request body. body=%v: %v", data.ReqBody, err)
 				}
-				operation.RequestBody.Value.WithFormDataSchema(schema)
+				operationSetRequestBody(operation, spec.NewRequestBody().WithFormDataSchema(schema))
 			default:
 				log.Infof("Treating %v as default request content type (no schema)", reqContentType)
 			}
@@ -308,6 +308,10 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 	operation.AddResponse(data.statusCode, response)
 
 	return operation, nil
+}
+
+func operationSetRequestBody(operation *spec.Operation, reqBody *spec.RequestBody) {
+	operation.RequestBody = &spec.RequestBodyRef{Value: reqBody}
 }
 
 func CloneOperation(op *spec.Operation) (*spec.Operation, error) {

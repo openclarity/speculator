@@ -44,6 +44,9 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 		return fmt.Errorf("provided spec is not valid. %w", err)
 	}
 
+	if s.ProvidedSpec == nil {
+		s.ProvidedSpec = &ProvidedSpec{}
+	}
 	s.ProvidedSpec.Doc = doc
 
 	// path trie need to be repopulated from start on each new spec

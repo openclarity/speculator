@@ -21,7 +21,6 @@ import (
 
 	spec "github.com/getkin/kin-openapi/openapi3"
 	log "github.com/sirupsen/logrus"
-	"github.com/xeipuuv/gojsonschema"
 )
 
 var supportedQueryParamsSerializationStyles = []string{
@@ -115,12 +114,6 @@ func getSchemaFromValue(value string, shouldTryArraySchema bool, paramInType str
 	if shouldTryArraySchema {
 		schema, _ := getNewArraySchema(value, paramInType)
 		if schema != nil {
-			return schema
-		}
-	}
-
-	if jsonValue, err := gojsonschema.NewStringLoader(value).LoadJSON(); err == nil {
-		if schema, err := getSchema(jsonValue); err == nil {
 			return schema
 		}
 	}

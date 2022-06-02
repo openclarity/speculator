@@ -32,6 +32,10 @@ func createConflictMsg(path *field.Path, t1, t2 interface{}) string {
 	return fmt.Sprintf("%s: type mismatch: %+v != %+v", path, t1, t2)
 }
 
+func createHeaderInConflictMsg(path *field.Path, in, in2 interface{}) string {
+	return fmt.Sprintf("%s: header in mismatch: %+v != %+v", path, in, in2)
+}
+
 func (c conflict) String() string {
 	return c.msg
 }

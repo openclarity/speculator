@@ -254,25 +254,9 @@ func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryR
 	clonedSpecOp = sortParameters(clonedSpecOp)
 
 	// Keep only telemetry status code
-	clonedSpecOp, err = keepResponseStatusCode(clonedSpecOp, telemetryResponse.StatusCode)
-	if err != nil {
-		return nil, err
-	}
+	clonedSpecOp = keepResponseStatusCode(clonedSpecOp, telemetryResponse.StatusCode)
 
-	// Check if there is a change in the response, if so, take “produces“ into account. Otherwise don’t include “produces“ in both.
-	hasDiff, err := compareObjects(clonedSpecOp.Responses, clonedTelemetryOp.Responses)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compare responses: %w", err)
-	}
-	if hasDiff {
-		// Found a diff
-		return &operationDiff{
-			OriginalOperation: clonedSpecOp,
-			ModifiedOperation: clonedTelemetryOp,
-		}, nil
-	}
-
-	hasDiff, err = compareObjects(clonedSpecOp, clonedTelemetryOp)
+	hasDiff, err := compareObjects(clonedSpecOp, clonedTelemetryOp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compare operations: %w", err)
 	}
@@ -303,19 +287,32 @@ func compareObjects(obj1, obj2 interface{}) (hasDiff bool, err error) {
 }
 
 // keepResponseStatusCode will remove all status codes from StatusCodeResponses map except the `statusCodeToKeep`.
-func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) (*oapi_spec.Operation, error) {
+func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) *oapi_spec.Operation {
 	// keep only the provided status code
 	if op.Responses != nil {
-		filterResponses := oapi_spec.NewResponses()
-		filterResponses[statusCodeToKeep] = op.Responses[statusCodeToKeep]
-		filterResponses["default"] = op.Responses.Default()
-		op.Responses = filterResponses
+		filterResponses := make(oapi_spec.Responses)
+		if responseRef, ok := op.Responses[statusCodeToKeep]; ok {
+			filterResponses[statusCodeToKeep] = responseRef
+		}
+		// keep default if exists
+		if responseRef, ok := op.Responses["default"]; ok {
+			filterResponses["default"] = responseRef
+		}
+
+		if len(filterResponses) == 0 {
+			op.Responses = nil
+		} else {
+			op.Responses = filterResponses
+		}
 	}
 
-	return op, nil
+	return op
 }
 
 func sortParameters(operation *oapi_spec.Operation) *oapi_spec.Operation {
+	if operation == nil {
+		return operation
+	}
 	sort.Slice(operation.Parameters, func(i, j int) bool {
 		right := operation.Parameters[i].Value
 		left := operation.Parameters[j].Value

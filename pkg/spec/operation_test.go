@@ -17,6 +17,7 @@ package spec
 
 import (
 	"encoding/json"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"net/url"
 	"reflect"
 	"strings"
@@ -152,7 +153,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"BasicAuth\":[]}],\"consumes\":[\"application/hal+json\"],\"produces\":[\"application/hal+json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"BasicAuth\":[]}]}",
 			expectedSd: spec.SecuritySchemes{
 				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
@@ -174,7 +175,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"OAuth2\":[\"admin\",\"write:pets\"]}]}",
 			expectedSd: spec.SecuritySchemes{
 				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
@@ -196,7 +197,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode:  200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"OAuth2\":[\"admin\",\"write:pets\"]}]}",
 			expectedSd: spec.SecuritySchemes{
 				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
@@ -217,7 +218,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/x-www-form-urlencoded\":{\"schema\":{\"properties\":{\"key\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"OAuth2\":[\"admin\",\"write:pets\"]}]}",
 			expectedSd: spec.SecuritySchemes{
 				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
@@ -240,7 +241,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode:  200,
 				},
 			},
-			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}]}",
 			expectedSd: spec.SecuritySchemes{
 				// Note: Auth Header will be used before Query Parameter is ignored.
 				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
@@ -263,7 +264,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode: 200,
 				},
 			},
-			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"ApiKeyAuth\":[]}]}",
 			expectedSd: spec.SecuritySchemes{
 				APIKeyAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewAPIKeySecuritySchemeInHeader(defaultAPIKeyHeaderName)},
 			},
@@ -285,7 +286,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 					statusCode:  200,
 				},
 			},
-			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
+			want: "{\"requestBody\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"format\":\"uuid\",\"type\":\"string\"},\"controllerInstanceInfo\":{\"properties\":{\"replicaId\":{\"type\":\"string\"}},\"type\":\"object\"},\"policyAndAppVersion\":{\"format\":\"int64\",\"type\":\"integer\"},\"statusCodes\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"}}}},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"cvss\":{\"items\":{\"properties\":{\"score\":{\"type\":\"number\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}}},\"default\":{\"description\":\"\"}},\"security\":[{\"ApiKeyAuth\":[]}]}",
 			expectedSd: spec.SecuritySchemes{
 				APIKeyAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewAPIKeySecuritySchemeInQuery(defaultAPIKeyHeaderName)},
 			},
@@ -488,9 +489,7 @@ func TestCloneOperation(t *testing.T) {
 				t.Errorf("CloneOperation() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("CloneOperation() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 			if got != nil {
 				got.Responses = nil
 				if tt.args.op.Responses == nil {

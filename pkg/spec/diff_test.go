@@ -16,6 +16,8 @@
 package spec
 
 import (
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 	"net/http"
 	"reflect"
 	"testing"
@@ -191,10 +193,9 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
-				Type:   DiffTypeGeneralDiff,
-				Path:   "/api",
-				PathID: "1",
-				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
+				Type:             DiffTypeGeneralDiff,
+				Path:             "/api",
+				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataWithAuth).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -354,9 +355,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				t.Errorf("DiffTelemetry() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DiffTelemetry() got = %s, want %s", marshal(got), marshal(tt.want))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }
@@ -430,10 +429,9 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetryWithSecurity(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
-				Type:   DiffTypeGeneralDiff,
-				Path:   "/api",
-				PathID: "1",
-				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
+				Type:             DiffTypeGeneralDiff,
+				Path:             "/api",
+				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataWithAuth).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -686,7 +684,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				Type:   DiffTypeZombieDiff,
 				Path:   "/api",
 				PathID: "1",
-				// when there is no diff in response, we don’t include 'Produces' in the diff logic so we need to clear produces here
+
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -739,9 +737,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				t.Errorf("DiffTelemetry() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DiffTelemetry() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }
@@ -760,10 +756,9 @@ func Test_keepResponseStatusCode(t *testing.T) {
 		statusCodeToKeep string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *spec.Operation
-		wantErr bool
+		name string
+		args args
+		want *spec.Operation
 	}{
 		{
 			name: "keep 1 remove 1",
@@ -773,8 +768,7 @@ func Test_keepResponseStatusCode(t *testing.T) {
 					WithResponse(300, spec.NewResponse().WithDescription("delete")).Op,
 				statusCodeToKeep: "200",
 			},
-			want:    createTestOperation().WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
-			wantErr: false,
+			want: createTestOperation().WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
 		},
 		{
 			name: "status code to keep not found - remove all",
@@ -784,21 +778,19 @@ func Test_keepResponseStatusCode(t *testing.T) {
 					WithResponse(300, spec.NewResponse().WithDescription("delete")).Op,
 				statusCodeToKeep: "200",
 			},
-			want:    spec.NewOperation(),
-			wantErr: false,
+			want: spec.NewOperation(),
 		},
 		{
 			name: "status code to keep not found - remove all keep default response",
 			args: args{
 				op: createTestOperation().
 					WithResponse(202, spec.NewResponse().WithDescription("delete")).
-					WithResponse(0, spec.NewResponse().WithDescription("keep-default")).
-					WithResponse(300, spec.NewResponse().WithDescription("delete")).Op,
+					WithResponse(300, spec.NewResponse().WithDescription("delete")).
+					WithResponse(0, spec.NewResponse().WithDescription("keep-default")).Op,
 				statusCodeToKeep: "200",
 			},
 			want: createTestOperation().
 				WithResponse(0, spec.NewResponse().WithDescription("keep-default")).Op,
-			wantErr: false,
 		},
 		{
 			name: "only status code to keep is found",
@@ -809,29 +801,12 @@ func Test_keepResponseStatusCode(t *testing.T) {
 			},
 			want: createTestOperation().
 				WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
-			wantErr: false,
-		},
-		{
-			name: "invalid status code",
-			args: args{
-				op: createTestOperation().
-					WithResponse(200, spec.NewResponse().WithDescription("")).Op,
-				statusCodeToKeep: "invalid",
-			},
-			want:    nil,
-			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := keepResponseStatusCode(tt.args.op, tt.args.statusCodeToKeep)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("keepResponseStatusCode() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("keepResponseStatusCode() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
+			got := keepResponseStatusCode(tt.args.op, tt.args.statusCodeToKeep)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }
@@ -987,22 +962,6 @@ func Test_calculateOperationDiff(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name: "invalid status code",
-			args: args{
-				specOp: createTestOperation().
-					WithResponse(200, spec.NewResponse().WithDescription("test")).
-					WithParameter(spec.NewHeaderParameter("header")).Op,
-				telemetryOp: createTestOperation().
-					WithResponse(200, spec.NewResponse().WithDescription("test")).
-					WithParameter(spec.NewHeaderParameter("new-header")).Op,
-				telemetryResponse: &Response{
-					StatusCode: "invalid",
-				},
-			},
-			want:    nil,
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1011,9 +970,7 @@ func Test_calculateOperationDiff(t *testing.T) {
 				t.Errorf("calculateOperationDiff() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("calculateOperationDiff() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }

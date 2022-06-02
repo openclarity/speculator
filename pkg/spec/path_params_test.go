@@ -16,6 +16,8 @@
 package spec
 
 import (
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 	"reflect"
 	"sort"
 	"testing"
@@ -273,9 +275,7 @@ func Test_getParamTypeAndFormat(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			schema := getParamSchema(tt.args.paramsList)
-			if schema != tt.want {
-				t.Errorf("getParamSchema() got schema = %+v, want schema %+v", schema, tt.want)
-			}
+			assert.DeepEqual(t, schema, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 		})
 	}
 }

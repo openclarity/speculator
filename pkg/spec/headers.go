@@ -48,6 +48,10 @@ func (o *OperationGenerator) addResponseHeader(response *spec.Response, headerKe
 		return response
 	}
 
+	if response.Headers == nil {
+		response.Headers = make(spec.Headers)
+	}
+
 	response.Headers[headerKey] = &spec.HeaderRef{
 		Value: &spec.Header{
 			Parameter: spec.Parameter{

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gotest.tools/assert"
 	"k8s.io/utils/field"
 )
@@ -82,9 +83,7 @@ func Test_merge(t *testing.T) {
 			}
 			got = sortParameters(got)
 			tt.want = sortParameters(tt.want)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeOperation() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }
@@ -408,7 +407,7 @@ func Test_mergeHeader(t *testing.T) {
 					obj2: &spec.Header{
 						Parameter: *spec.NewCookieParameter("cookie").WithSchema(spec.NewArraySchema()),
 					},
-					msg: createConflictMsg(field.NewPath("test"), spec.ParameterInHeader, spec.ParameterInCookie),
+					msg: createHeaderInConflictMsg(field.NewPath("test"), spec.ParameterInHeader, spec.ParameterInCookie),
 				},
 			},
 		},
@@ -585,7 +584,7 @@ func Test_mergeResponseHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeResponseHeader(tt.args.headers, tt.args.headers2, tt.args.path)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeResponseHeader() got = %v, want %v", got, tt.want)
+				t.Errorf("mergeResponseHeader() got = %+v, want %+v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeResponseHeader() got1 = %v, want %v", got1, tt.want1)
@@ -696,14 +695,14 @@ func Test_mergeResponse(t *testing.T) {
 				path: field.NewPath("200"),
 			},
 			want: createTestResponse().
-				WithJSONSchema(spec.NewStringSchema()).
+				WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
 				WithHeader("X-Header", spec.NewUUIDSchema()).Response,
 			want1: []conflict{
 				{
-					path: field.NewPath("200").Child("schema"),
+					path: field.NewPath("200").Child("content").Child("application/json"),
 					obj1: spec.NewArraySchema().WithItems(spec.NewStringSchema()),
 					obj2: spec.NewStringSchema(),
-					msg: createConflictMsg(field.NewPath("200").Child("schema"),
+					msg: createConflictMsg(field.NewPath("200").Child("content").Child("application/json"),
 						spec.TypeArray, spec.TypeString),
 				},
 				{
@@ -719,9 +718,7 @@ func Test_mergeResponse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeResponse(tt.args.response, tt.args.response2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeResponse() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeResponse() got1 = %v, want %v", got1, tt.want1)
 			}
@@ -799,10 +796,10 @@ func Test_mergeResponses(t *testing.T) {
 			want: createTestResponses().
 				WithResponse("200", createTestResponse().
 					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
-					WithHeader("X-Header2", spec.NewUUIDSchema()).Response).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).
 				WithResponse("201", createTestResponse().
 					WithJSONSchema(spec.NewStringSchema()).
-					WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
+					WithHeader("X-Header2", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
@@ -886,11 +883,12 @@ func Test_mergeResponses(t *testing.T) {
 					WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
 			want1: []conflict{
 				{
-					path: field.NewPath("responses").Child("200").Child("schema").Child("items"),
+					path: field.NewPath("responses").Child("200").Child("content").
+						Child("application/json").Child("items"),
 					obj1: spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()),
 					obj2: spec.NewStringSchema(),
-					msg: createConflictMsg(field.NewPath("responses").Child("200").Child("schema").Child("items"),
-						spec.TypeArray, spec.TypeString),
+					msg: createConflictMsg(field.NewPath("responses").Child("200").Child("content").
+						Child("application/json").Child("items"), spec.TypeArray, spec.TypeString),
 				},
 			},
 		},
@@ -898,6 +896,7 @@ func Test_mergeResponses(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeResponses(tt.args.responses, tt.args.responses2, tt.args.path)
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeResponses() got = %v, want %v", got, tt.want)
 			}
@@ -1043,9 +1042,7 @@ func Test_mergeProperties(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeProperties(tt.args.properties, tt.args.properties2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeProperties() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeProperties() got1 = %v, want %v", got1, tt.want1)
 			}
@@ -1096,9 +1093,9 @@ func Test_mergeSchemaItems(t *testing.T) {
 			want1: []conflict{
 				{
 					path: field.NewPath("test").Child("items"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewArraySchema().WithItems(spec.NewStringSchema()),
 					obj2: spec.NewInt64Schema(),
-					msg:  createConflictMsg(field.NewPath("test").Child("items"), spec.TypeString, spec.TypeInteger),
+					msg:  createConflictMsg(field.NewPath("test").Child("items"), spec.TypeArray, spec.TypeInteger),
 				},
 			},
 		},
@@ -1146,9 +1143,7 @@ func Test_mergeSchemaItems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeSchemaItems(tt.args.items, tt.args.items2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeSchemaItems() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeSchemaItems() got1 = %v, want %v", got1, tt.want1)
 			}
@@ -1394,9 +1389,7 @@ func Test_mergeParameter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1 := mergeParameter(tt.args.parameter, tt.args.parameter2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeParameter() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeParameter() got1 = %v, want %v", got1, tt.want1)
 			}
@@ -1906,7 +1899,7 @@ func Test_mergeOperationSecurity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := mergeOperationSecurity(tt.args.security, tt.args.security2)
-			sort.Slice(got, func(i, j int) bool {
+			sort.Slice(*got, func(i, j int) bool {
 				_, ok := (*got)[i]["key1"]
 				return ok
 			})

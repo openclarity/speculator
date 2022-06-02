@@ -16,7 +16,8 @@
 package spec
 
 import (
-	"encoding/json"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 	"reflect"
 	"testing"
 
@@ -84,17 +85,36 @@ func Test_handleApplicationFormURLEncodedBody(t *testing.T) {
 				operation: spec.NewOperation(),
 				body:      "name%2",
 			},
-			want: spec.NewOperation(),
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "OAuth2 security",
 			args: args{
 				operation:       spec.NewOperation(),
 				body:            AccessTokenParamKey + "=token",
-				securitySchemes: map[string]*spec.SecuritySchemeRef{},
+				securitySchemes: spec.SecuritySchemes{},
 			},
-			want: createTestOperation().WithSecurityRequirement(map[string][]string{OAuth2SecuritySchemeKey: {}}).Op,
-			want1: map[string]*spec.SecuritySchemeRef{
+			want: createTestOperation().
+				WithSecurityRequirement(map[string][]string{OAuth2SecuritySchemeKey: {}}).Op,
+			want1: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: {Value: NewOAuth2SecurityScheme([]string{})},
+			},
+		},
+		{
+			name: "OAuth2 security + some params",
+			args: args{
+				operation:       spec.NewOperation(),
+				body:            AccessTokenParamKey + "=token&name=Amy",
+				securitySchemes: spec.SecuritySchemes{},
+			},
+			want: createTestOperation().
+				WithSecurityRequirement(map[string][]string{OAuth2SecuritySchemeKey: {}}).
+				WithRequestBody(spec.NewRequestBody().WithSchema(
+					spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+						"name": spec.NewStringSchema(),
+					}), []string{mediaTypeApplicationForm})).Op,
+			want1: spec.SecuritySchemes{
 				OAuth2SecuritySchemeKey: {Value: NewOAuth2SecurityScheme([]string{})},
 			},
 		},
@@ -108,9 +128,7 @@ func Test_handleApplicationFormURLEncodedBody(t *testing.T) {
 			}
 			op = sortParameters(op)
 			tt.want = sortParameters(tt.want)
-			if !reflect.DeepEqual(op, tt.want) {
-				t.Errorf("handleApplicationFormURLEncodedBody() op = %v, want %v", op, tt.want)
-			}
+			assert.DeepEqual(t, op, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 			if !reflect.DeepEqual(securitySchemes, tt.want1) {
 				t.Errorf("handleApplicationFormURLEncodedBody() securitySchemes = %v, want %v", marshal(securitySchemes), marshal(tt.want1))
 			}
@@ -146,8 +164,9 @@ var formDataBody = "--cdce6441022a3dcf\r\n" +
 	"Content-Disposition: form-data; name=\"integer\"\r\n\r\n" +
 	"12\r\n" +
 	"--cdce6441022a3dcf\r\n" +
-	"Content-Disposition: form-data; name=\"boolean-empty-value\"\r\n\r\n" +
-	"\r\n" +
+	"Content-Disposition: form-data; name=\"id\"\r\n" +
+	"Content-Type: text/plain\r\n\r\n" +
+	"123e4567-e89b-12d3-a456-426655440000\r\n" +
 	"--cdce6441022a3dcf\r\n" +
 	"Content-Disposition: form-data; name=\"boolean\"\r\n\r\n" +
 	"false\r\n" +
@@ -176,8 +195,8 @@ func Test_addMultipartFormDataParams(t *testing.T) {
 				"integer":                         spec.NewInt64Schema(),
 				"boolean":                         spec.NewBoolSchema(),
 				"string":                          spec.NewStringSchema(),
-				"array-to-ignore-expected-string": spec.NewArraySchema().WithItems(spec.NewStringSchema()),
-				"boolean-empty-value":             newBoolSchemaWithAllowEmptyValue(),
+				"array-to-ignore-expected-string": spec.NewStringSchema(),
+				"id":                              spec.NewUUIDSchema(),
 			}),
 			wantErr: false,
 		},
@@ -209,11 +228,7 @@ func Test_addMultipartFormDataParams(t *testing.T) {
 				t.Errorf("getMultipartFormDataSchema() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				gotB, _ := json.Marshal(got)
-				wantB, _ := json.Marshal(tt.want)
-				t.Errorf("getMultipartFormDataSchema() got = %v, want %v", string(gotB), string(wantB))
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 		})
 	}
 }

@@ -23,6 +23,11 @@ import (
 )
 
 func addQueryParam(operation *spec.Operation, key string, values []string) *spec.Operation {
+	operation.AddParameter(spec.NewQueryParameter(key).WithSchema(getSchemaFromQueryValues(values)))
+	return operation
+}
+
+func getSchemaFromQueryValues(values []string) *spec.Schema {
 	var schema *spec.Schema
 	if len(values) == 0 || values[0] == "" {
 		schema = spec.NewBoolSchema()
@@ -30,9 +35,7 @@ func addQueryParam(operation *spec.Operation, key string, values []string) *spec
 	} else {
 		schema = getSchemaFromValues(values, true, spec.ParameterInQuery)
 	}
-
-	operation.AddParameter(spec.NewQueryParameter(key).WithSchema(schema))
-	return operation
+	return schema
 }
 
 func extractQueryParams(path string) (url.Values, error) {

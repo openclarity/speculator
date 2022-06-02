@@ -16,8 +16,6 @@
 package spec
 
 import (
-	"fmt"
-
 	spec "github.com/getkin/kin-openapi/openapi3"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/field"
@@ -222,8 +220,8 @@ func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*s
 		return parameter.WithSchema(schema), conflicts
 	case spec.TypeArray:
 		items, conflicts := mergeSchemaItems(parameter.Schema.Value.Items, parameter2.Schema.Value.Items, path)
-		return parameter.WithSchema(items.Value), conflicts
-	case "":
+		return parameter.WithSchema(spec.NewArraySchema().WithItems(items.Value)), conflicts
+	case spec.TypeObject, "":
 		// when type is missing it is probably an object - we should try and merge the parameter schema
 		schema, conflicts := mergeSchema(parameter.Schema.Value, parameter2.Schema.Value, path.Child("schema"))
 		return parameter.WithSchema(schema), conflicts
@@ -348,13 +346,20 @@ func mergeResponses(responses, responses2 spec.Responses, path *field.Path) (spe
 func mergeResponse(response, response2 *spec.Response, path *field.Path) (*spec.Response, []conflict) {
 	var retConflicts []conflict
 	retResponse := spec.NewResponse()
+	if response.Description != nil {
+		retResponse.WithDescription(*response.Description)
+	}
 
 	content, conflicts := mergeContent(response.Content, response2.Content, path.Child("content"))
-	retResponse.WithContent(content)
+	if len(content) > 0 {
+		retResponse.WithContent(content)
+	}
 	retConflicts = append(retConflicts, conflicts...)
 
 	headers, conflicts := mergeResponseHeader(response.Headers, response2.Headers, path.Child("headers"))
-	retResponse.Headers = headers
+	if len(headers) > 0 {
+		retResponse.Headers = headers
+	}
 	retConflicts = append(retConflicts, conflicts...)
 
 	return retResponse, retConflicts
@@ -426,7 +431,7 @@ func mergeHeader(header, header2 *spec.Header, path *field.Path) (*spec.Header, 
 				path: path,
 				obj1: header,
 				obj2: header2,
-				msg:  fmt.Sprintf("%s: header in mismatch: %+v != %+v", path, header.In, header2.In),
+				msg:  createHeaderInConflictMsg(path, header.In, header2.In),
 			},
 		}
 	}

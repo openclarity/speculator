@@ -118,6 +118,10 @@ func (op *TestOperation) Deprecated() *TestOperation {
 
 func (op *TestOperation) WithResponse(status int, response *oapi_spec.Response) *TestOperation {
 	op.Op.AddResponse(status, response)
+	if status != 0 {
+		// we don't need it to create default response in tests unless we explicitly asked for (status == 0)
+		delete(op.Op.Responses, "default")
+	}
 	return op
 }
 
@@ -127,7 +131,7 @@ func (op *TestOperation) WithParameter(param *oapi_spec.Parameter) *TestOperatio
 }
 
 func (op *TestOperation) WithRequestBody(requestBody *oapi_spec.RequestBody) *TestOperation {
-	op.Op.RequestBody.Value = requestBody
+	operationSetRequestBody(op.Op, requestBody)
 	return op
 }
 
@@ -154,6 +158,9 @@ func createTestResponse() *TestResponse {
 }
 
 func (r *TestResponse) WithHeader(name string, schema *oapi_spec.Schema) *TestResponse {
+	if r.Response.Headers == nil {
+		r.Response.Headers = make(oapi_spec.Headers)
+	}
 	r.Response.Headers[name] = &oapi_spec.HeaderRef{
 		Value: &oapi_spec.Header{
 			Parameter: oapi_spec.Parameter{

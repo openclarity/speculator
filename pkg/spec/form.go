@@ -35,21 +35,30 @@ func handleApplicationFormURLEncodedBody(operation *spec.Operation, securitySche
 		return nil, nil, fmt.Errorf("failed to parse query. body=%v: %v", body, err)
 	}
 
-	schema := spec.NewObjectSchema()
+	objSchema := spec.NewObjectSchema()
 
 	for key, values := range parseQuery {
 		if key == AccessTokenParamKey {
 			// https://datatracker.ietf.org/doc/html/rfc6750#section-2.2
 			operation, securitySchemes = handleAuthQueryParam(operation, securitySchemes, values)
 		} else {
-			schema.WithProperty(key, getSchemaFromValues(values, true, spec.ParameterInQuery))
+			var schema *spec.Schema
+			if len(values) == 0 || values[0] == "" {
+				schema = spec.NewBoolSchema()
+				schema.AllowEmptyValue = true
+			} else {
+				schema = getSchemaFromValues(values, true, spec.ParameterInQuery)
+			}
+			objSchema.WithProperty(key, getSchemaFromQueryValues(values))
 		}
 	}
 
-	operation.RequestBody.Value.WithContent(spec.NewContentWithSchema(schema, []string{mediaTypeApplicationForm}))
-	// TODO: handle encoding
-	// https://swagger.io/docs/specification/describing-request-body/
-	//operation.RequestBody.Value.GetMediaType(mediaTypeApplicationForm).Encoding
+	if len(objSchema.Properties) != 0 {
+		operationSetRequestBody(operation, spec.NewRequestBody().WithContent(spec.NewContentWithSchema(objSchema, []string{mediaTypeApplicationForm})))
+		// TODO: handle encoding
+		// https://swagger.io/docs/specification/describing-request-body/
+		//operation.RequestBody.Value.GetMediaType(mediaTypeApplicationForm).Encoding
+	}
 
 	return operation, securitySchemes, nil
 }
