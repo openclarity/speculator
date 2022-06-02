@@ -16,9 +16,10 @@
 package spec
 
 import (
+	log "github.com/sirupsen/logrus"
 	"strings"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 var defaultIgnoredHeaders = []string{
@@ -47,31 +48,48 @@ func (o *OperationGenerator) addResponseHeader(response *spec.Response, headerKe
 		return response
 	}
 
-	responseHeader := spec.ResponseHeader()
-
-	if isDateFormat(headerValue) {
-		responseHeader.Typed(schemaTypeString, "")
-	} else {
-		items, collectionFormat := getCollection(headerValue, supportedCollectionFormat)
-		if items != nil {
-			responseHeader.CollectionOf(items, collectionFormat)
-		} else {
-			tpe, format := getTypeAndFormat(headerValue)
-			responseHeader.Typed(tpe, format)
-		}
+	response.Headers[headerKey] = &spec.HeaderRef{
+		Value: &spec.Header{
+			Parameter: spec.Parameter{
+				Schema: spec.NewSchemaRef("",
+					getSchemaFromValue(headerValue, true, spec.ParameterInHeader)),
+			},
+		},
 	}
 
-	return response.AddHeader(headerKey, responseHeader)
+	return response
 }
 
+// https://swagger.io/docs/specification/describing-parameters/#header-parameters
 func (o *OperationGenerator) addHeaderParam(operation *spec.Operation, headerKey, headerValue string) *spec.Operation {
 	if shouldIgnoreHeader(o.RequestHeadersToIgnore, headerKey) {
 		return operation
 	}
 
-	headerParam := spec.HeaderParam(headerKey)
+	headerParam := spec.NewHeaderParameter(headerKey).
+		WithSchema(getSchemaFromValue(headerValue, true, spec.ParameterInHeader))
+	operation.AddParameter(headerParam)
 
-	return operation.AddParam(populateParam(headerParam, []string{headerValue}, true))
+	return operation
+}
+
+// https://swagger.io/docs/specification/describing-parameters/#cookie-parameters
+func (o *OperationGenerator) addCookieParam(operation *spec.Operation, headerValue string) *spec.Operation {
+	// Multiple cookie parameters are sent in the same header, separated by a semicolon and space.
+	for _, cookie := range strings.Split(headerValue, "; ") {
+		cookieKeyAndValue := strings.Split(cookie, "=")
+		if len(cookieKeyAndValue) != 2 {
+			log.Warnf("unsupported cookie param. %v", cookie)
+			continue
+		}
+		key, value := cookieKeyAndValue[0], cookieKeyAndValue[1]
+		// Cookie parameters can be primitive values, arrays and objects.
+		// Arrays and objects are serialized using the form style.
+		headerParam := spec.NewCookieParameter(key).WithSchema(getSchemaFromValue(value, true, spec.ParameterInCookie))
+		operation.AddParameter(headerParam)
+	}
+
+	return operation
 }
 
 func ConvertHeadersToMap(headers []*Header) map[string]string {

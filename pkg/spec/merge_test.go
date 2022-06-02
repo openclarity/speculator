@@ -19,13 +19,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 	"gotest.tools/assert"
 	"k8s.io/utils/field"
 )
 
 func Test_merge(t *testing.T) {
-	sd := spec.SecurityDefinitions{}
+	securitySchemes := spec.SecuritySchemes{}
 	op := CreateTestNewOperationGenerator()
 	op1, err := op.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req1,
@@ -33,15 +33,16 @@ func Test_merge(t *testing.T) {
 		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", contentTypeHeaderName: mediaTypeApplicationJSON},
 		RespHeaders: map[string]string{"X-Test-Res-1": "1", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
-	}, sd)
+	}, securitySchemes)
 	assert.NilError(t, err)
+
 	op2, err := op.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:     req2,
 		RespBody:    res2,
 		ReqHeaders:  map[string]string{"X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		RespHeaders: map[string]string{"X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
-	}, sd)
+	}, securitySchemes)
 	assert.NilError(t, err)
 
 	combinedOp, err := op.GenerateSpecOperation(&HTTPInteractionData{
@@ -50,7 +51,7 @@ func Test_merge(t *testing.T) {
 		ReqHeaders:  map[string]string{"X-Test-Req-1": "1", "X-Test-Req-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		RespHeaders: map[string]string{"X-Test-Res-1": "1", "X-Test-Res-2": "2", contentTypeHeaderName: mediaTypeApplicationJSON},
 		statusCode:  200,
-	}, sd)
+	}, securitySchemes)
 	assert.NilError(t, err)
 
 	type args struct {
@@ -102,19 +103,19 @@ func Test_shouldReturnIfEmpty(t *testing.T) {
 		{
 			name: "second nil",
 			args: args{
-				a: spec.NewOperation(""),
+				a: spec.NewOperation(),
 				b: nil,
 			},
-			want:  spec.NewOperation(""),
+			want:  spec.NewOperation(),
 			want1: true,
 		},
 		{
 			name: "first nil",
 			args: args{
 				a: nil,
-				b: spec.NewOperation(""),
+				b: spec.NewOperation(),
 			},
-			want:  spec.NewOperation(""),
+			want:  spec.NewOperation(),
 			want1: true,
 		},
 		{
@@ -129,8 +130,8 @@ func Test_shouldReturnIfEmpty(t *testing.T) {
 		{
 			name: "not nil",
 			args: args{
-				a: spec.NewOperation(""),
-				b: spec.NewOperation(""),
+				a: spec.NewOperation(),
+				b: spec.NewOperation(),
 			},
 			want:  nil,
 			want1: false,
@@ -151,8 +152,7 @@ func Test_shouldReturnIfEmpty(t *testing.T) {
 
 func Test_shouldReturnIfNil(t *testing.T) {
 	var nilSchema *spec.Schema
-	schema := spec.Schema{}
-	schema.Typed("test", "")
+	schema := spec.Schema{Type: "test"}
 	type args struct {
 		a interface{}
 		b interface{}
@@ -215,8 +215,7 @@ func Test_shouldReturnIfNil(t *testing.T) {
 
 func Test_shouldReturnIfEmptySchemaType(t *testing.T) {
 	emptySchemaType := &spec.Schema{}
-	schema := &spec.Schema{}
-	schema.Typed("test", "")
+	schema := &spec.Schema{Type: "test"}
 	type args struct {
 		s  *spec.Schema
 		s2 *spec.Schema
@@ -278,18 +277,18 @@ func Test_shouldReturnIfEmptySchemaType(t *testing.T) {
 }
 
 func Test_shouldReturnIfEmptyParameters(t *testing.T) {
-	var emptyParameters []spec.Parameter
-	parameters := []spec.Parameter{
-		*spec.HeaderParam("test"),
+	var emptyParameters spec.Parameters
+	parameters := spec.Parameters{
+		&spec.ParameterRef{Value: spec.NewHeaderParameter("test")},
 	}
 	type args struct {
-		parameters  []spec.Parameter
-		parameters2 []spec.Parameter
+		parameters  spec.Parameters
+		parameters2 spec.Parameters
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  []spec.Parameter
+		want  spec.Parameters
 		want1 bool
 	}{
 		{
@@ -344,8 +343,8 @@ func Test_shouldReturnIfEmptyParameters(t *testing.T) {
 
 func Test_mergeHeader(t *testing.T) {
 	type args struct {
-		header  spec.Header
-		header2 spec.Header
+		header  *spec.Header
+		header2 *spec.Header
 		child   *field.Path
 	}
 	tests := []struct {
@@ -357,38 +356,98 @@ func Test_mergeHeader(t *testing.T) {
 		{
 			name: "nothing to merge",
 			args: args{
-				header:  *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				header2: *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				child:   nil,
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+				},
+				child: nil,
 			},
-			want:  spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+			},
 			want1: nil,
 		},
 		{
 			name: "merge string type removal",
 			args: args{
-				header:  *spec.ResponseHeader().Typed(schemaTypeString, formatUUID),
-				header2: *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				child:   nil,
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewUUIDSchema()),
+				},
+				child: nil,
 			},
-			want:  spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+			},
 			want1: nil,
+		},
+		{
+			name: "header in conflicts",
+			args: args{
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewCookieParameter("cookie").WithSchema(spec.NewArraySchema()),
+				},
+				child: field.NewPath("test"),
+			},
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+			},
+			want1: []conflict{
+				{
+					path: field.NewPath("test"),
+					obj1: &spec.Header{
+						Parameter: *spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+					},
+					obj2: &spec.Header{
+						Parameter: *spec.NewCookieParameter("cookie").WithSchema(spec.NewArraySchema()),
+					},
+					msg: createConflictMsg(field.NewPath("test"), spec.ParameterInHeader, spec.ParameterInCookie),
+				},
+			},
 		},
 		{
 			name: "type conflicts",
 			args: args{
-				header:  *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				header2: *spec.ResponseHeader().CollectionOf(spec.NewItems(), ""),
-				child:   field.NewPath("test"),
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewArraySchema()),
+				},
+				child: field.NewPath("test"),
 			},
-			want: spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("test"),
-					obj1: spec.ResponseHeader().Typed(schemaTypeString, "").SimpleSchema,
-					obj2: spec.ResponseHeader().CollectionOf(spec.NewItems(), "").SimpleSchema,
-					msg:  createConflictMsg(field.NewPath("test"), schemaTypeString, schemaTypeArray),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewArraySchema(),
+					msg:  createConflictMsg(field.NewPath("test"), spec.TypeString, spec.TypeArray),
 				},
+			},
+		},
+		{
+			name: "empty header",
+			args: args{
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("empty"),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewArraySchema()),
+				},
+				child: field.NewPath("test"),
+			},
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewArraySchema()),
 			},
 		},
 	}
@@ -407,117 +466,117 @@ func Test_mergeHeader(t *testing.T) {
 
 func Test_mergeResponseHeader(t *testing.T) {
 	type args struct {
-		headers  map[string]spec.Header
-		headers2 map[string]spec.Header
+		headers  spec.Headers
+		headers2 spec.Headers
 		path     *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  map[string]spec.Header
+		want  spec.Headers
 		want1 []conflict
 	}{
 		{
 			name: "first headers list empty",
 			args: args{
-				headers: map[string]spec.Header{},
-				headers2: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers: spec.Headers{},
+				headers2: spec.Headers{
+					"test": createHeaderRef(spec.NewStringSchema()),
 				},
 				path: nil,
 			},
-			want: map[string]spec.Header{
-				"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: spec.Headers{
+				"test": createHeaderRef(spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "second headers list empty",
 			args: args{
-				headers: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers: spec.Headers{
+					"test": createHeaderRef(spec.NewStringSchema()),
 				},
-				headers2: map[string]spec.Header{},
+				headers2: spec.Headers{},
 				path:     nil,
 			},
-			want: map[string]spec.Header{
-				"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: spec.Headers{
+				"test": createHeaderRef(spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "no common headers",
 			args: args{
-				headers: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers: spec.Headers{
+					"test": createHeaderRef(spec.NewStringSchema()),
 				},
-				headers2: map[string]spec.Header{
-					"test2": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers2: spec.Headers{
+					"test2": createHeaderRef(spec.NewStringSchema()),
 				},
 				path: nil,
 			},
-			want: map[string]spec.Header{
-				"test":  *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				"test2": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: spec.Headers{
+				"test":  createHeaderRef(spec.NewStringSchema()),
+				"test2": createHeaderRef(spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "merge mutual headers",
 			args: args{
-				headers: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers: spec.Headers{
+					"test": createHeaderRef(spec.NewStringSchema()),
 				},
-				headers2: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, formatUUID),
+				headers2: spec.Headers{
+					"test": createHeaderRef(spec.NewUUIDSchema()),
 				},
 				path: nil,
 			},
-			want: map[string]spec.Header{
-				"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: spec.Headers{
+				"test": createHeaderRef(spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "merge mutual headers and keep non mutual",
 			args: args{
-				headers: map[string]spec.Header{
-					"mutual":     *spec.ResponseHeader().Typed(schemaTypeString, ""),
-					"nonmutual1": *spec.ResponseHeader().Typed(schemaTypeInteger, ""),
+				headers: spec.Headers{
+					"mutual":     createHeaderRef(spec.NewStringSchema()),
+					"nonmutual1": createHeaderRef(spec.NewInt64Schema()),
 				},
-				headers2: map[string]spec.Header{
-					"mutual":     *spec.ResponseHeader().Typed(schemaTypeString, formatUUID),
-					"nonmutual2": *spec.ResponseHeader().Typed(schemaTypeBoolean, ""),
+				headers2: spec.Headers{
+					"mutual":     createHeaderRef(spec.NewUUIDSchema()),
+					"nonmutual2": createHeaderRef(spec.NewBoolSchema()),
 				},
 				path: nil,
 			},
-			want: map[string]spec.Header{
-				"mutual":     *spec.ResponseHeader().Typed(schemaTypeString, ""),
-				"nonmutual1": *spec.ResponseHeader().Typed(schemaTypeInteger, ""),
-				"nonmutual2": *spec.ResponseHeader().Typed(schemaTypeBoolean, ""),
+			want: spec.Headers{
+				"mutual":     createHeaderRef(spec.NewStringSchema()),
+				"nonmutual1": createHeaderRef(spec.NewInt64Schema()),
+				"nonmutual2": createHeaderRef(spec.NewBoolSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "merge mutual headers with conflicts",
 			args: args{
-				headers: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+				headers: spec.Headers{
+					"test": createHeaderRef(spec.NewStringSchema()),
 				},
-				headers2: map[string]spec.Header{
-					"test": *spec.ResponseHeader().Typed(schemaTypeBoolean, ""),
+				headers2: spec.Headers{
+					"test": createHeaderRef(spec.NewBoolSchema()),
 				},
 				path: field.NewPath("headers"),
 			},
-			want: map[string]spec.Header{
-				"test": *spec.ResponseHeader().Typed(schemaTypeString, ""),
+			want: spec.Headers{
+				"test": createHeaderRef(spec.NewStringSchema()),
 			},
 			want1: []conflict{
 				{
 					path: field.NewPath("headers").Child("test"),
-					obj1: spec.ResponseHeader().Typed(schemaTypeString, "").SimpleSchema,
-					obj2: spec.ResponseHeader().Typed(schemaTypeBoolean, "").SimpleSchema,
-					msg:  createConflictMsg(field.NewPath("headers").Child("test"), schemaTypeString, schemaTypeBoolean),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewBoolSchema(),
+					msg:  createConflictMsg(field.NewPath("headers").Child("test"), spec.TypeString, spec.TypeBoolean),
 				},
 			},
 		},
@@ -535,10 +594,20 @@ func Test_mergeResponseHeader(t *testing.T) {
 	}
 }
 
+func createHeaderRef(schema *spec.Schema) *spec.HeaderRef {
+	return &spec.HeaderRef{
+		Value: &spec.Header{
+			Parameter: spec.Parameter{
+				Schema: spec.NewSchemaRef("", schema),
+			},
+		},
+	}
+}
+
 func Test_mergeResponse(t *testing.T) {
 	type args struct {
-		response  spec.Response
-		response2 spec.Response
+		response  *spec.Response
+		response2 *spec.Response
 		path      *field.Path
 	}
 	tests := []struct {
@@ -550,107 +619,99 @@ func Test_mergeResponse(t *testing.T) {
 		{
 			name: "first response is empty",
 			args: args{
-				response: spec.Response{},
-				response2: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
-				path: nil,
+				response:  spec.NewResponse(),
+				response2: createTestResponse().WithHeader("X-Header", spec.NewStringSchema()).Response,
+				path:      nil,
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.StringProperty()).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+			want:  createTestResponse().WithHeader("X-Header", spec.NewStringSchema()).Response,
 			want1: nil,
 		},
 		{
 			name: "second response is empty",
 			args: args{
-				response: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
-				response2: spec.Response{},
+				response:  createTestResponse().WithHeader("X-Header", spec.NewStringSchema()).Response,
+				response2: spec.NewResponse(),
 				path:      nil,
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.StringProperty()).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+			want:  createTestResponse().WithHeader("X-Header", spec.NewStringSchema()).Response,
 			want1: nil,
 		},
 		{
 			name: "merge response schema",
 			args: args{
-				response: *spec.NewResponse().
-					WithSchema(spec.DateTimeProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
-				response2: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+				response: createTestResponse().
+					WithJSONSchema(spec.NewDateTimeSchema()).
+					WithHeader("X-Header", spec.NewStringSchema()).Response,
+				response2: createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewStringSchema()).Response,
 				path: nil,
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.StringProperty()).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+			want: createTestResponse().
+				WithJSONSchema(spec.NewStringSchema()).
+				WithHeader("X-Header", spec.NewStringSchema()).Response,
 			want1: nil,
 		},
 		{
 			name: "merge response header",
 			args: args{
-				response: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-				response2: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+				response: createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+				response2: createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewStringSchema()).Response,
 				path: nil,
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.StringProperty()).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+			want: createTestResponse().
+				WithJSONSchema(spec.NewStringSchema()).
+				WithHeader("X-Header", spec.NewStringSchema()).Response,
 			want1: nil,
 		},
 		{
 			name: "merge response header and schema",
 			args: args{
-				response: *spec.NewResponse().
-					WithSchema(spec.DateTimeProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-				response2: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+				response: createTestResponse().
+					WithJSONSchema(spec.NewDateTimeSchema()).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+				response2: createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewStringSchema()).Response,
 				path: nil,
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.StringProperty()).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, "")),
+			want: createTestResponse().
+				WithJSONSchema(spec.NewStringSchema()).
+				WithHeader("X-Header", spec.NewStringSchema()).Response,
 			want1: nil,
 		},
 		{
 			name: "merge response header and schema with conflicts",
 			args: args{
-				response: *spec.NewResponse().
-					WithSchema(spec.ArrayProperty(spec.StringProperty())).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-				response2: *spec.NewResponse().
-					WithSchema(spec.StringProperty()).
-					AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeBoolean, "")),
+				response: createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+				response2: createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewBoolSchema()).Response,
 				path: field.NewPath("200"),
 			},
-			want: spec.NewResponse().
-				WithSchema(spec.ArrayProperty(spec.StringProperty())).
-				AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
+			want: createTestResponse().
+				WithJSONSchema(spec.NewStringSchema()).
+				WithHeader("X-Header", spec.NewUUIDSchema()).Response,
 			want1: []conflict{
 				{
 					path: field.NewPath("200").Child("schema"),
-					obj1: spec.ArrayProperty(spec.StringProperty()),
-					obj2: spec.StringProperty(),
+					obj1: spec.NewArraySchema().WithItems(spec.NewStringSchema()),
+					obj2: spec.NewStringSchema(),
 					msg: createConflictMsg(field.NewPath("200").Child("schema"),
-						schemaTypeArray, schemaTypeString),
+						spec.TypeArray, spec.TypeString),
 				},
 				{
 					path: field.NewPath("200").Child("headers").Child("X-Header"),
-					obj1: spec.ResponseHeader().Typed(schemaTypeString, formatUUID).SimpleSchema,
-					obj2: spec.ResponseHeader().Typed(schemaTypeBoolean, "").SimpleSchema,
+					obj1: spec.NewUUIDSchema(),
+					obj2: spec.NewBoolSchema(),
 					msg: createConflictMsg(field.NewPath("200").Child("headers").Child("X-Header"),
-						schemaTypeString, schemaTypeBoolean),
+						spec.TypeString, spec.TypeBoolean),
 				},
 			},
 		},
@@ -670,70 +731,46 @@ func Test_mergeResponse(t *testing.T) {
 
 func Test_mergeResponses(t *testing.T) {
 	type args struct {
-		responses  *spec.Responses
-		responses2 *spec.Responses
+		responses  spec.Responses
+		responses2 spec.Responses
 		path       *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  *spec.Responses
+		want  spec.Responses
 		want1 []conflict
 	}{
 		{
 			name: "first is nil",
 			args: args{
 				responses: nil,
-				responses2: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses2: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 				path: nil,
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.StringProperty())).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
 			name: "second is nil",
 			args: args{
-				responses: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 				responses2: nil,
 				path:       nil,
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.StringProperty())).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
@@ -749,183 +786,111 @@ func Test_mergeResponses(t *testing.T) {
 		{
 			name: "non mutual response code responses",
 			args: args{
-				responses: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
-				responses2: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							201: *spec.NewResponse().
-								WithSchema(spec.StringProperty()).
-								AddHeader("X-Header2", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
+				responses2: createTestResponses().
+					WithResponse("201", createTestResponse().
+						WithJSONSchema(spec.NewStringSchema()).
+						WithHeader("X-Header2", spec.NewUUIDSchema()).Response).Responses,
 				path: nil,
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.StringProperty())).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						201: *spec.NewResponse().
-							WithSchema(spec.StringProperty()).
-							AddHeader("X-Header2", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header2", spec.NewUUIDSchema()).Response).
+				WithResponse("201", createTestResponse().
+					WithJSONSchema(spec.NewStringSchema()).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
 			name: "mutual response code responses",
 			args: args{
-				responses: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.DateTimeProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
-				responses2: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewDateTimeSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
+				responses2: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 				path: nil,
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.StringProperty())).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual response code responses",
 			args: args{
-				responses: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.DateTimeProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-							201: *spec.NewResponse().
-								WithSchema(spec.DateTimeProperty()).
-								AddHeader("X-Header1", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
-				responses2: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-							202: *spec.NewResponse().
-								WithSchema(spec.BooleanProperty()).
-								AddHeader("X-Header3", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewDateTimeSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("201", createTestResponse().
+						WithJSONSchema(spec.NewDateTimeSchema()).
+						WithHeader("X-Header1", spec.NewUUIDSchema()).Response).Responses,
+				responses2: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("202", createTestResponse().
+						WithJSONSchema(spec.NewBoolSchema()).
+						WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
 				path: nil,
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.StringProperty())).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						201: *spec.NewResponse().
-							WithSchema(spec.DateTimeProperty()).
-							AddHeader("X-Header1", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						202: *spec.NewResponse().
-							WithSchema(spec.BooleanProperty()).
-							AddHeader("X-Header3", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+				WithResponse("201", createTestResponse().
+					WithJSONSchema(spec.NewDateTimeSchema()).
+					WithHeader("X-Header1", spec.NewUUIDSchema()).Response).
+				WithResponse("202", createTestResponse().
+					WithJSONSchema(spec.NewBoolSchema()).
+					WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual response code responses with conflicts",
 			args: args{
-				responses: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.ArrayProperty(spec.DateTimeProperty()))).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-							201: *spec.NewResponse().
-								WithSchema(spec.DateTimeProperty()).
-								AddHeader("X-Header1", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
-				responses2: &spec.Responses{
-					ResponsesProps: spec.ResponsesProps{
-						Default: defaultResponse,
-						StatusCodeResponses: map[int]spec.Response{
-							200: *spec.NewResponse().
-								WithSchema(spec.ArrayProperty(spec.StringProperty())).
-								AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-							202: *spec.NewResponse().
-								WithSchema(spec.BooleanProperty()).
-								AddHeader("X-Header3", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						},
-					},
-				},
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()))).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("201", createTestResponse().
+						WithJSONSchema(spec.NewDateTimeSchema()).
+						WithHeader("X-Header1", spec.NewUUIDSchema()).Response).Responses,
+				responses2: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("202", createTestResponse().
+						WithJSONSchema(spec.NewBoolSchema()).
+						WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
 				path: field.NewPath("responses"),
 			},
-			want: &spec.Responses{
-				ResponsesProps: spec.ResponsesProps{
-					Default: defaultResponse,
-					StatusCodeResponses: map[int]spec.Response{
-						200: *spec.NewResponse().
-							WithSchema(spec.ArrayProperty(spec.ArrayProperty(spec.DateTimeProperty()))).
-							AddHeader("X-Header", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						201: *spec.NewResponse().
-							WithSchema(spec.DateTimeProperty()).
-							AddHeader("X-Header1", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-						202: *spec.NewResponse().
-							WithSchema(spec.BooleanProperty()).
-							AddHeader("X-Header3", spec.ResponseHeader().Typed(schemaTypeString, formatUUID)),
-					},
-				},
-			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()))).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+				WithResponse("201", createTestResponse().
+					WithJSONSchema(spec.NewDateTimeSchema()).
+					WithHeader("X-Header1", spec.NewUUIDSchema()).Response).
+				WithResponse("202", createTestResponse().
+					WithJSONSchema(spec.NewBoolSchema()).
+					WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
 			want1: []conflict{
 				{
 					path: field.NewPath("responses").Child("200").Child("schema").Child("items"),
-					obj1: spec.ArrayProperty(spec.DateTimeProperty()),
-					obj2: spec.StringProperty(),
+					obj1: spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()),
+					obj2: spec.NewStringSchema(),
 					msg: createConflictMsg(field.NewPath("responses").Child("200").Child("schema").Child("items"),
-						schemaTypeArray, schemaTypeString),
+						spec.TypeArray, spec.TypeString),
 				},
 			},
 		},
@@ -945,41 +910,41 @@ func Test_mergeResponses(t *testing.T) {
 
 func Test_mergeProperties(t *testing.T) {
 	type args struct {
-		properties  spec.SchemaProperties
-		properties2 spec.SchemaProperties
+		properties  spec.Schemas
+		properties2 spec.Schemas
 		path        *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  spec.SchemaProperties
+		want  spec.Schemas
 		want1 []conflict
 	}{
 		{
 			name: "first is nil",
 			args: args{
 				properties: nil,
-				properties2: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
+				properties2: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 				},
 				path: nil,
 			},
-			want: spec.SchemaProperties{
-				"string-key": *spec.StringProperty(),
+			want: spec.Schemas{
+				"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "second is nil",
 			args: args{
-				properties: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
+				properties: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 				},
 				properties2: nil,
 				path:        nil,
 			},
-			want: spec.SchemaProperties{
-				"string-key": *spec.StringProperty(),
+			want: spec.Schemas{
+				"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
@@ -990,87 +955,87 @@ func Test_mergeProperties(t *testing.T) {
 				properties2: nil,
 				path:        nil,
 			},
-			want:  make(spec.SchemaProperties),
+			want:  make(spec.Schemas),
 			want1: nil,
 		},
 		{
 			name: "non mutual properties",
 			args: args{
-				properties: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
+				properties: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 				},
-				properties2: spec.SchemaProperties{
-					"bool-key": *spec.BooleanProperty(),
+				properties2: spec.Schemas{
+					"bool-key": spec.NewSchemaRef("", spec.NewBoolSchema()),
 				},
 				path: nil,
 			},
-			want: spec.SchemaProperties{
-				"string-key": *spec.StringProperty(),
-				"bool-key":   *spec.BooleanProperty(),
+			want: spec.Schemas{
+				"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
+				"bool-key":   spec.NewSchemaRef("", spec.NewBoolSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual properties",
 			args: args{
-				properties: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
+				properties: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 				},
-				properties2: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
+				properties2: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 				},
 				path: nil,
 			},
-			want: spec.SchemaProperties{
-				"string-key": *spec.StringProperty(),
+			want: spec.Schemas{
+				"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual properties",
 			args: args{
-				properties: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
-					"bool-key":   *spec.BooleanProperty(),
+				properties: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
+					"bool-key":   spec.NewSchemaRef("", spec.NewBoolSchema()),
 				},
-				properties2: spec.SchemaProperties{
-					"string-key": *spec.StringProperty(),
-					"int-key":    *spec.Int64Property(),
+				properties2: spec.Schemas{
+					"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
+					"int-key":    spec.NewSchemaRef("", spec.NewInt64Schema()),
 				},
 				path: nil,
 			},
-			want: spec.SchemaProperties{
-				"string-key": *spec.StringProperty(),
-				"int-key":    *spec.Int64Property(),
-				"bool-key":   *spec.BooleanProperty(),
+			want: spec.Schemas{
+				"string-key": spec.NewSchemaRef("", spec.NewStringSchema()),
+				"int-key":    spec.NewSchemaRef("", spec.NewInt64Schema()),
+				"bool-key":   spec.NewSchemaRef("", spec.NewBoolSchema()),
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual response code responses with conflicts",
 			args: args{
-				properties: spec.SchemaProperties{
-					"conflict": *spec.BooleanProperty(),
-					"bool-key": *spec.BooleanProperty(),
+				properties: spec.Schemas{
+					"conflict": spec.NewSchemaRef("", spec.NewBoolSchema()),
+					"bool-key": spec.NewSchemaRef("", spec.NewBoolSchema()),
 				},
-				properties2: spec.SchemaProperties{
-					"conflict": *spec.Int64Property(),
-					"int-key":  *spec.Int64Property(),
+				properties2: spec.Schemas{
+					"conflict": spec.NewSchemaRef("", spec.NewInt64Schema()),
+					"int-key":  spec.NewSchemaRef("", spec.NewInt64Schema()),
 				},
 				path: field.NewPath("properties"),
 			},
-			want: spec.SchemaProperties{
-				"conflict": *spec.BooleanProperty(),
-				"int-key":  *spec.Int64Property(),
-				"bool-key": *spec.BooleanProperty(),
+			want: spec.Schemas{
+				"conflict": spec.NewSchemaRef("", spec.NewBoolSchema()),
+				"int-key":  spec.NewSchemaRef("", spec.NewInt64Schema()),
+				"bool-key": spec.NewSchemaRef("", spec.NewBoolSchema()),
 			},
 			want1: []conflict{
 				{
 					path: field.NewPath("properties").Child("conflict"),
-					obj1: spec.BooleanProperty(),
-					obj2: spec.Int64Property(),
+					obj1: spec.NewBoolSchema(),
+					obj2: spec.NewInt64Schema(),
 					msg: createConflictMsg(field.NewPath("properties").Child("conflict"),
-						schemaTypeBoolean, schemaTypeInteger),
+						spec.TypeBoolean, spec.TypeInteger),
 				},
 			},
 		},
@@ -1090,81 +1055,81 @@ func Test_mergeProperties(t *testing.T) {
 
 func Test_mergeSchemaItems(t *testing.T) {
 	type args struct {
-		items  *spec.SchemaOrArray
-		items2 *spec.SchemaOrArray
+		items  *spec.SchemaRef
+		items2 *spec.SchemaRef
 		path   *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  *spec.SchemaOrArray
+		want  *spec.SchemaRef
 		want1 []conflict
 	}{
 		{
 			name: "no merge needed",
 			args: args{
-				items:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
-				items2: &spec.SchemaOrArray{Schema: spec.StringProperty()},
+				items:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+				items2: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 				path:   field.NewPath("test"),
 			},
-			want:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: nil,
 		},
 		{
 			name: "items with string format - format should be removed",
 			args: args{
-				items:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
-				items2: &spec.SchemaOrArray{Schema: spec.StrFmtProperty(formatUUID)},
+				items:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+				items2: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewUUIDSchema())),
 				path:   field.NewPath("test"),
 			},
-			want:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: nil,
 		},
 		{
 			name: "different type of items",
 			args: args{
-				items:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
-				items2: &spec.SchemaOrArray{Schema: spec.Int64Property()},
+				items:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+				items2: spec.NewSchemaRef("", spec.NewInt64Schema()),
 				path:   field.NewPath("test"),
 			},
-			want: &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: []conflict{
 				{
 					path: field.NewPath("test").Child("items"),
-					obj1: spec.StringProperty(),
-					obj2: spec.Int64Property(),
-					msg:  createConflictMsg(field.NewPath("test").Child("items"), schemaTypeString, schemaTypeInteger),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewInt64Schema(),
+					msg:  createConflictMsg(field.NewPath("test").Child("items"), spec.TypeString, spec.TypeInteger),
 				},
 			},
 		},
 		{
 			name: "items2 nil items - expected to get items",
 			args: args{
-				items:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+				items:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 				items2: nil,
 				path:   field.NewPath("test"),
 			},
-			want:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: nil,
 		},
 		{
 			name: "items2 nil schema - expected to get items",
 			args: args{
-				items:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
-				items2: &spec.SchemaOrArray{Schema: nil},
+				items:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+				items2: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(nil)),
 				path:   field.NewPath("test"),
 			},
-			want:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: nil,
 		},
 		{
 			name: "items nil items - expected to get items2",
 			args: args{
 				items:  nil,
-				items2: &spec.SchemaOrArray{Schema: spec.StringProperty()},
+				items2: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 				path:   field.NewPath("test"),
 			},
-			want:  &spec.SchemaOrArray{Schema: spec.StringProperty()},
+			want:  spec.NewSchemaRef("", spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: nil,
 		},
 		{
@@ -1192,7 +1157,7 @@ func Test_mergeSchemaItems(t *testing.T) {
 }
 
 func Test_mergeSchema(t *testing.T) {
-	emptySchemaType := spec.RefSchema("test")
+	emptySchemaType := spec.NewSchema()
 	type args struct {
 		schema  *spec.Schema
 		schema2 *spec.Schema
@@ -1207,31 +1172,31 @@ func Test_mergeSchema(t *testing.T) {
 		{
 			name: "no merge needed",
 			args: args{
-				schema:  spec.Int64Property(),
-				schema2: spec.Int64Property(),
+				schema:  spec.NewInt64Schema(),
+				schema2: spec.NewInt64Schema(),
 				path:    nil,
 			},
-			want:  spec.Int64Property(),
+			want:  spec.NewInt64Schema(),
 			want1: nil,
 		},
 		{
 			name: "first is nil",
 			args: args{
 				schema:  nil,
-				schema2: spec.Int64Property(),
+				schema2: spec.NewInt64Schema(),
 				path:    nil,
 			},
-			want:  spec.Int64Property(),
+			want:  spec.NewInt64Schema(),
 			want1: nil,
 		},
 		{
 			name: "second is nil",
 			args: args{
-				schema:  spec.Int64Property(),
+				schema:  spec.NewInt64Schema(),
 				schema2: nil,
 				path:    nil,
 			},
-			want:  spec.Int64Property(),
+			want:  spec.NewInt64Schema(),
 			want1: nil,
 		},
 		{
@@ -1248,20 +1213,20 @@ func Test_mergeSchema(t *testing.T) {
 			name: "first has empty schema type",
 			args: args{
 				schema:  emptySchemaType,
-				schema2: spec.Int64Property(),
+				schema2: spec.NewInt64Schema(),
 				path:    nil,
 			},
-			want:  spec.Int64Property(),
+			want:  spec.NewInt64Schema(),
 			want1: nil,
 		},
 		{
 			name: "second has empty schema type",
 			args: args{
-				schema:  spec.Int64Property(),
+				schema:  spec.NewInt64Schema(),
 				schema2: emptySchemaType,
 				path:    nil,
 			},
-			want:  spec.Int64Property(),
+			want:  spec.NewInt64Schema(),
 			want1: nil,
 		},
 		{
@@ -1277,69 +1242,69 @@ func Test_mergeSchema(t *testing.T) {
 		{
 			name: "type conflict",
 			args: args{
-				schema:  spec.Int64Property(),
-				schema2: spec.BooleanProperty(),
+				schema:  spec.NewInt64Schema(),
+				schema2: spec.NewBoolSchema(),
 				path:    field.NewPath("schema"),
 			},
-			want: spec.Int64Property(),
+			want: spec.NewInt64Schema(),
 			want1: []conflict{
 				{
 					path: field.NewPath("schema"),
-					obj1: spec.Int64Property(),
-					obj2: spec.BooleanProperty(),
-					msg:  createConflictMsg(field.NewPath("schema"), schemaTypeInteger, schemaTypeBoolean),
+					obj1: spec.NewInt64Schema(),
+					obj2: spec.NewBoolSchema(),
+					msg:  createConflictMsg(field.NewPath("schema"), spec.TypeInteger, spec.TypeBoolean),
 				},
 			},
 		},
 		{
 			name: "string type with different format - dismiss the format",
 			args: args{
-				schema:  spec.DateTimeProperty(),
-				schema2: spec.DateProperty(),
+				schema:  spec.NewDateTimeSchema(),
+				schema2: spec.NewUUIDSchema(),
 				path:    field.NewPath("schema"),
 			},
-			want:  spec.StringProperty(),
+			want:  spec.NewStringSchema(),
 			want1: nil,
 		},
 		{
 			name: "array conflict",
 			args: args{
-				schema:  spec.ArrayProperty(spec.Int64Property()),
-				schema2: spec.ArrayProperty(spec.Float64Property()),
+				schema:  spec.NewArraySchema().WithItems(spec.NewInt64Schema()),
+				schema2: spec.NewArraySchema().WithItems(spec.NewFloat64Schema()),
 				path:    field.NewPath("schema"),
 			},
-			want: spec.ArrayProperty(spec.Int64Property()),
+			want: spec.NewArraySchema().WithItems(spec.NewInt64Schema()),
 			want1: []conflict{
 				{
 					path: field.NewPath("schema").Child("items"),
-					obj1: spec.Int64Property(),
-					obj2: spec.Float64Property(),
-					msg:  createConflictMsg(field.NewPath("schema").Child("items"), schemaTypeInteger, schemaTypeNumber),
+					obj1: spec.NewInt64Schema(),
+					obj2: spec.NewFloat64Schema(),
+					msg:  createConflictMsg(field.NewPath("schema").Child("items"), spec.TypeInteger, spec.TypeNumber),
 				},
 			},
 		},
 		{
 			name: "merge object with conflict",
 			args: args{
-				schema: spec.MapProperty(nil).
-					SetProperty("bool", *spec.BooleanProperty()).
-					SetProperty("conflict", *spec.StringProperty()),
-				schema2: spec.MapProperty(nil).
-					SetProperty("float", *spec.Float64Property()).
-					SetProperty("conflict", *spec.Int64Property()),
+				schema: spec.NewObjectSchema().
+					WithProperty("bool", spec.NewBoolSchema()).
+					WithProperty("conflict", spec.NewStringSchema()),
+				schema2: spec.NewObjectSchema().
+					WithProperty("float", spec.NewFloat64Schema()).
+					WithProperty("conflict", spec.NewInt64Schema()),
 				path: field.NewPath("schema"),
 			},
-			want: spec.MapProperty(nil).
-				SetProperty("bool", *spec.BooleanProperty()).
-				SetProperty("conflict", *spec.StringProperty()).
-				SetProperty("float", *spec.Float64Property()),
+			want: spec.NewObjectSchema().
+				WithProperty("bool", spec.NewBoolSchema()).
+				WithProperty("conflict", spec.NewStringSchema()).
+				WithProperty("float", spec.NewFloat64Schema()),
 			want1: []conflict{
 				{
 					path: field.NewPath("schema").Child("properties").Child("conflict"),
-					obj1: spec.StringProperty(),
-					obj2: spec.Int64Property(),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewInt64Schema(),
 					msg: createConflictMsg(field.NewPath("schema").Child("properties").Child("conflict"),
-						schemaTypeString, schemaTypeInteger),
+						spec.TypeString, spec.TypeInteger),
 				},
 			},
 		},
@@ -1357,320 +1322,72 @@ func Test_mergeSchema(t *testing.T) {
 	}
 }
 
-func Test_mergeSimpleSchema(t *testing.T) {
-	type args struct {
-		simpleSchema  spec.SimpleSchema
-		simpleSchema2 spec.SimpleSchema
-		path          *field.Path
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  spec.SimpleSchema
-		want1 []conflict
-	}{
-		{
-			name: "type conflict",
-			args: args{
-				simpleSchema:  spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-				simpleSchema2: spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-				path:          field.NewPath("items"),
-			},
-			want: spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-			want1: []conflict{
-				{
-					path: field.NewPath("items"),
-					obj1: spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-					obj2: spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-					msg: createConflictMsg(field.NewPath("items"),
-						schemaTypeInteger, schemaTypeBoolean),
-				},
-			},
-		},
-		{
-			name: "both integer",
-			args: args{
-				simpleSchema:  spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-				simpleSchema2: spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-				path:          field.NewPath("items"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeInteger, "").SimpleSchema,
-			want1: nil,
-		},
-		{
-			name: "both boolean",
-			args: args{
-				simpleSchema:  spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-				simpleSchema2: spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-				path:          field.NewPath("items"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-			want1: nil,
-		},
-		{
-			name: "both number",
-			args: args{
-				simpleSchema:  spec.NewItems().Typed(schemaTypeNumber, "").SimpleSchema,
-				simpleSchema2: spec.NewItems().Typed(schemaTypeNumber, "").SimpleSchema,
-				path:          field.NewPath("items"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeNumber, "").SimpleSchema,
-			want1: nil,
-		},
-		{
-			name: "string format conflict - ignore format",
-			args: args{
-				simpleSchema:  spec.NewItems().Typed(schemaTypeString, "uuid").SimpleSchema,
-				simpleSchema2: spec.NewItems().Typed(schemaTypeString, "date").SimpleSchema,
-				path:          field.NewPath("items"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeString, "").SimpleSchema,
-			want1: nil,
-		},
-		{
-			name: "conflict array",
-			args: args{
-				simpleSchema: spec.NewItems().
-					CollectionOf(spec.NewItems().Typed(schemaTypeString, ""), collectionFormatComma).SimpleSchema,
-				simpleSchema2: spec.NewItems().
-					CollectionOf(spec.NewItems().Typed(schemaTypeBoolean, ""), collectionFormatComma).SimpleSchema,
-				path: field.NewPath("items"),
-			},
-			want: spec.NewItems().
-				CollectionOf(spec.NewItems().Typed(schemaTypeString, ""), collectionFormatComma).SimpleSchema,
-			want1: []conflict{
-				{
-					path: field.NewPath("items").Child("items"),
-					obj1: spec.NewItems().Typed(schemaTypeString, "").SimpleSchema,
-					obj2: spec.NewItems().Typed(schemaTypeBoolean, "").SimpleSchema,
-					msg: createConflictMsg(field.NewPath("items").Child("items"),
-						schemaTypeString, schemaTypeBoolean),
-				},
-			},
-		},
-		{
-			name: "not supported schema type",
-			args: args{
-				simpleSchema: spec.SimpleSchema{
-					Type: "not supported",
-				},
-				simpleSchema2: spec.SimpleSchema{
-					Type: "not supported",
-				},
-				path: field.NewPath("items"),
-			},
-			want: spec.SimpleSchema{
-				Type: "not supported",
-			},
-			want1: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := mergeSimpleSchema(tt.args.simpleSchema, tt.args.simpleSchema2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeSimpleSchema() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("mergeSimpleSchema() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func Test_mergeSimpleSchemaItems(t *testing.T) {
-	itemsInItemsSimpleSchemaInteger := spec.NewItems().Typed(schemaTypeArray, "")
-	itemsInItemsSimpleSchemaInteger.Items = spec.NewItems().Typed(schemaTypeInteger, "")
-
-	itemsInItemsSimpleSchemaBoolean := spec.NewItems().Typed(schemaTypeArray, "")
-	itemsInItemsSimpleSchemaBoolean.Items = spec.NewItems().Typed(schemaTypeBoolean, "")
-	type args struct {
-		items  *spec.Items
-		items2 *spec.Items
-		path   *field.Path
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  *spec.Items
-		want1 []conflict
-	}{
-		{
-			name: "no merge needed",
-			args: args{
-				items:  spec.NewItems().Typed(schemaTypeString, ""),
-				items2: spec.NewItems().Typed(schemaTypeString, ""),
-				path:   field.NewPath("test"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeString, ""),
-			want1: nil,
-		},
-		{
-			name: "array with string format - format should be removed",
-			args: args{
-				items:  spec.NewItems().Typed(schemaTypeString, ""),
-				items2: spec.NewItems().Typed(schemaTypeString, formatUUID),
-				path:   field.NewPath("test"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeString, ""),
-			want1: nil,
-		},
-		{
-			name: "items in items",
-			args: args{
-				items:  itemsInItemsSimpleSchemaInteger,
-				items2: itemsInItemsSimpleSchemaBoolean,
-				path:   field.NewPath("test"),
-			},
-			want: itemsInItemsSimpleSchemaInteger,
-			want1: []conflict{
-				{
-					path: field.NewPath("test").Child("items").Child("items"),
-					obj1: spec.SimpleSchema{
-						Type: schemaTypeInteger,
-					},
-					obj2: spec.SimpleSchema{
-						Type: schemaTypeBoolean,
-					},
-					msg: createConflictMsg(field.NewPath("test").Child("items").Child("items"), schemaTypeInteger, schemaTypeBoolean),
-				},
-			},
-		},
-		{
-			name: "different type of items",
-			args: args{
-				items:  spec.NewItems().Typed(schemaTypeString, ""),
-				items2: spec.NewItems().Typed(schemaTypeInteger, ""),
-				path:   field.NewPath("test"),
-			},
-			want: spec.NewItems().Typed(schemaTypeString, ""),
-			want1: []conflict{
-				{
-					path: field.NewPath("test").Child("items"),
-					obj1: spec.SimpleSchema{
-						Type: schemaTypeString,
-					},
-					obj2: spec.SimpleSchema{
-						Type: schemaTypeInteger,
-					},
-					msg: createConflictMsg(field.NewPath("test").Child("items"), schemaTypeString, schemaTypeInteger),
-				},
-			},
-		},
-		{
-			name: "items2 nil items - expected to get items",
-			args: args{
-				items:  spec.NewItems().Typed(schemaTypeInteger, ""),
-				items2: nil,
-				path:   field.NewPath("test"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeInteger, ""),
-			want1: nil,
-		},
-		{
-			name: "items nil items - expected to get items2",
-			args: args{
-				items:  nil,
-				items2: spec.NewItems().Typed(schemaTypeInteger, ""),
-				path:   field.NewPath("test"),
-			},
-			want:  spec.NewItems().Typed(schemaTypeInteger, ""),
-			want1: nil,
-		},
-		{
-			name: "both items nil items - expected to get items",
-			args: args{
-				items:  nil,
-				items2: nil,
-				path:   field.NewPath("test"),
-			},
-			want:  nil,
-			want1: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := mergeSimpleSchemaItems(tt.args.items, tt.args.items2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeSimpleSchemaItems() got = %v, want %v", marshal(got), marshal(tt.want))
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("mergeSimpleSchemaItems() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
 func Test_mergeParameter(t *testing.T) {
 	type args struct {
-		parameter  spec.Parameter
-		parameter2 spec.Parameter
+		parameter  *spec.Parameter
+		parameter2 *spec.Parameter
 		path       *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  spec.Parameter
+		want  *spec.Parameter
 		want1 []conflict
 	}{
 		{
 			name: "param type conflict",
 			args: args{
-				parameter:  *spec.HeaderParam("header").Typed(schemaTypeString, ""),
-				parameter2: *spec.HeaderParam("header").Typed(schemaTypeBoolean, ""),
+				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewBoolSchema()),
 				path:       field.NewPath("param-name"),
 			},
-			want: *spec.HeaderParam("header").Typed(schemaTypeString, ""),
+			want: spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
 			want1: []conflict{
 				{
 					path: field.NewPath("param-name"),
-					obj1: *spec.HeaderParam("header").Typed(schemaTypeString, ""),
-					obj2: *spec.HeaderParam("header").Typed(schemaTypeBoolean, ""),
-					msg:  createConflictMsg(field.NewPath("param-name"), schemaTypeString, schemaTypeBoolean),
+					obj1: spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+					obj2: spec.NewHeaderParameter("header").WithSchema(spec.NewBoolSchema()),
+					msg:  createConflictMsg(field.NewPath("param-name"), spec.TypeString, spec.TypeBoolean),
 				},
 			},
 		},
 		{
 			name: "string merge",
 			args: args{
-				parameter:  *spec.HeaderParam("header").Typed(schemaTypeString, ""),
-				parameter2: *spec.HeaderParam("header").Typed(schemaTypeString, formatUUID),
+				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewUUIDSchema()),
 				path:       field.NewPath("param-name"),
 			},
-			want:  *spec.HeaderParam("header").Typed(schemaTypeString, ""),
+			want:  spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
 			want1: nil,
 		},
 		{
 			name: "array merge with conflict",
 			args: args{
-				parameter:  *spec.HeaderParam("header").CollectionOf(spec.NewItems().Typed(schemaTypeString, ""), collectionFormatComma),
-				parameter2: *spec.HeaderParam("header").CollectionOf(spec.NewItems().Typed(schemaTypeBoolean, ""), collectionFormatComma),
+				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewBoolSchema())),
 				path:       field.NewPath("param-name"),
 			},
-			want: *spec.HeaderParam("header").CollectionOf(spec.NewItems().Typed(schemaTypeString, ""), collectionFormatComma),
+			want: spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())),
 			want1: []conflict{
 				{
 					path: field.NewPath("param-name").Child("items"),
-					obj1: spec.SimpleSchema{
-						Type: schemaTypeString,
-					},
-					obj2: spec.SimpleSchema{
-						Type: schemaTypeBoolean,
-					},
-					msg: createConflictMsg(field.NewPath("param-name").Child("items"), schemaTypeString, schemaTypeBoolean),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewBoolSchema(),
+					msg:  createConflictMsg(field.NewPath("param-name").Child("items"), spec.TypeString, spec.TypeBoolean),
 				},
 			},
 		},
 		{
 			name: "object merge",
 			args: args{
-				parameter:  *spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("string", *spec.StringProperty())),
-				parameter2: *spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("bool", *spec.BooleanProperty())),
+				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("string", spec.NewStringSchema())),
+				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("bool", spec.NewBoolSchema())),
 				path:       field.NewPath("param-name"),
 			},
-			want: *spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).
-				SetProperty("bool", *spec.BooleanProperty()).
-				SetProperty("string", *spec.StringProperty())),
+			want: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+				WithProperty("bool", spec.NewBoolSchema()).
+				WithProperty("string", spec.NewStringSchema())),
 			want1: nil,
 		},
 	}
@@ -1689,28 +1406,28 @@ func Test_mergeParameter(t *testing.T) {
 
 func Test_makeParametersMapByName(t *testing.T) {
 	type args struct {
-		parameters []spec.Parameter
+		parameters spec.Parameters
 	}
 	tests := []struct {
 		name string
 		args args
-		want map[string]spec.Parameter
+		want map[string]*spec.ParameterRef
 	}{
 		{
 			name: "sanity",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("header"),
-					*spec.HeaderParam("header2"),
-					*spec.PathParam("path"),
-					*spec.PathParam("path2"),
+				parameters: spec.Parameters{
+					&spec.ParameterRef{Value: spec.NewHeaderParameter("header")},
+					&spec.ParameterRef{Value: spec.NewHeaderParameter("header2")},
+					&spec.ParameterRef{Value: spec.NewPathParameter("path")},
+					&spec.ParameterRef{Value: spec.NewPathParameter("path2")},
 				},
 			},
-			want: map[string]spec.Parameter{
-				"header":  *spec.HeaderParam("header"),
-				"header2": *spec.HeaderParam("header2"),
-				"path":    *spec.PathParam("path"),
-				"path2":   *spec.PathParam("path2"),
+			want: map[string]*spec.ParameterRef{
+				"header":  &spec.ParameterRef{Value: spec.NewHeaderParameter("header")},
+				"header2": &spec.ParameterRef{Value: spec.NewHeaderParameter("header2")},
+				"path":    &spec.ParameterRef{Value: spec.NewPathParameter("path")},
+				"path2":   &spec.ParameterRef{Value: spec.NewPathParameter("path2")},
 			},
 		},
 	}
@@ -1723,122 +1440,36 @@ func Test_makeParametersMapByName(t *testing.T) {
 	}
 }
 
-func Test_mergeInBodyParameters(t *testing.T) {
-	type args struct {
-		parameters  []spec.Parameter
-		parameters2 []spec.Parameter
-		path        *field.Path
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  []spec.Parameter
-		want1 []conflict
-	}{
-		{
-			name: "first is empty",
-			args: args{
-				parameters:  nil,
-				parameters2: []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-				path:        nil,
-			},
-			want:  []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-			want1: nil,
-		},
-		{
-			name: "second is empty",
-			args: args{
-				parameters:  []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-				parameters2: nil,
-				path:        nil,
-			},
-			want:  []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-			want1: nil,
-		},
-		{
-			name: "both are empty",
-			args: args{
-				parameters:  nil,
-				parameters2: nil,
-				path:        nil,
-			},
-			want:  nil,
-			want1: nil,
-		},
-		{
-			name: "conflict schema merge",
-			args: args{
-				parameters:  []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-				parameters2: []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.Int64Property())},
-				path:        field.NewPath("parameters"),
-			},
-			want: []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.StringProperty())},
-			want1: []conflict{
-				{
-					path: field.NewPath("parameters").Child("body").Child("schema"),
-					obj1: spec.StringProperty(),
-					obj2: spec.Int64Property(),
-					msg: createConflictMsg(field.NewPath("parameters").Child("body").Child("schema"),
-						schemaTypeString, schemaTypeInteger),
-				},
-			},
-		},
-		{
-			name: "schema object merge",
-			args: args{
-				parameters:  []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("string", *spec.StringProperty()))},
-				parameters2: []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("bool", *spec.BooleanProperty()))},
-				path:        field.NewPath("parameters"),
-			},
-			want: []spec.Parameter{*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).
-				SetProperty("string", *spec.StringProperty()).
-				SetProperty("bool", *spec.BooleanProperty()))},
-			want1: nil,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := mergeInBodyParameters(tt.args.parameters, tt.args.parameters2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeInBodyParameters() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("mergeInBodyParameters() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
 func Test_mergeParametersByInType(t *testing.T) {
 	type args struct {
-		parameters  []spec.Parameter
-		parameters2 []spec.Parameter
+		parameters  spec.Parameters
+		parameters2 spec.Parameters
 		path        *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  []spec.Parameter
+		want  spec.Parameters
 		want1 []conflict
 	}{
 		{
 			name: "first is nil",
 			args: args{
 				parameters:  nil,
-				parameters2: []spec.Parameter{*spec.HeaderParam("h")},
+				parameters2: spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("h")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 			want1: nil,
 		},
 		{
 			name: "second is nil",
 			args: args{
-				parameters:  []spec.Parameter{*spec.HeaderParam("h")},
+				parameters:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 				parameters2: nil,
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("h")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 			want1: nil,
 		},
 		{
@@ -1854,68 +1485,68 @@ func Test_mergeParametersByInType(t *testing.T) {
 		{
 			name: "non mutual parameters",
 			args: args{
-				parameters:  []spec.Parameter{*spec.HeaderParam("X-Header-1")},
-				parameters2: []spec.Parameter{*spec.HeaderParam("X-Header-2")},
+				parameters:  spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-1")}},
+				parameters2: spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-2")}},
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("X-Header-1"), *spec.HeaderParam("X-Header-2")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-1")}, {Value: spec.NewHeaderParameter("X-Header-2")}},
 			want1: nil,
 		},
 		{
 			name: "mutual parameters",
 			args: args{
-				parameters:  []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid")},
-				parameters2: []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "")},
+				parameters:  spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())}},
+				parameters2: spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewStringSchema())}},
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewStringSchema())}},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual parameters",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
-					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
 				},
 				path: nil,
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, ""),
-				*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
-				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
+				{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual parameters with conflicts",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-					*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
+					{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
 				},
 				path: field.NewPath("parameters"),
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-				*spec.HeaderParam("X-Header-2").Typed(schemaTypeBoolean, ""),
-				*spec.HeaderParam("X-Header-3").Typed(schemaTypeInteger, ""),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
+				{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
 			},
 			want1: []conflict{
 				{
 					path: field.NewPath("parameters").Child("X-Header-1"),
-					obj1: *spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					obj2: *spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), schemaTypeString,
-						schemaTypeBoolean),
+					obj1: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema()),
+					obj2: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema()),
+					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), spec.TypeString,
+						spec.TypeBoolean),
 				},
 			},
 		},
@@ -1937,36 +1568,33 @@ func Test_mergeParametersByInType(t *testing.T) {
 
 func Test_getParametersByIn(t *testing.T) {
 	type args struct {
-		parameters []spec.Parameter
+		parameters spec.Parameters
 	}
 	tests := []struct {
 		name string
 		args args
-		want map[string][]spec.Parameter
+		want map[string]spec.Parameters
 	}{
 		{
 			name: "sanity",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("h1"),
-					*spec.HeaderParam("h2"),
-					*spec.PathParam("p1"),
-					*spec.PathParam("p2"),
-					*spec.BodyParam("b1", nil),
-					*spec.BodyParam("b2", nil),
-					*spec.FormDataParam("f1"),
-					*spec.FileParam("f2"),
-					*spec.QueryParam("q1"),
-					*spec.QueryParam("q2"),
-					{ParamProps: spec.ParamProps{Name: "foo", In: "bar"}},
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("h1")},
+					{Value: spec.NewHeaderParameter("h2")},
+					{Value: spec.NewPathParameter("p1")},
+					{Value: spec.NewPathParameter("p2")},
+					{Value: spec.NewQueryParameter("q1")},
+					{Value: spec.NewQueryParameter("q2")},
+					{Value: spec.NewCookieParameter("c1")},
+					{Value: spec.NewCookieParameter("c2")},
+					{Value: &spec.Parameter{In: "not-supported"}},
 				},
 			},
-			want: map[string][]spec.Parameter{
-				parametersInBody:   {*spec.BodyParam("b1", nil), *spec.BodyParam("b2", nil)},
-				parametersInHeader: {*spec.HeaderParam("h1"), *spec.HeaderParam("h2")},
-				parametersInQuery:  {*spec.QueryParam("q1"), *spec.QueryParam("q2")},
-				parametersInForm:   {*spec.FormDataParam("f1"), *spec.FileParam("f2")},
-				parametersInPath:   {*spec.PathParam("p1"), *spec.PathParam("p2")},
+			want: map[string]spec.Parameters{
+				spec.ParameterInCookie: {{Value: spec.NewCookieParameter("c1")}, {Value: spec.NewCookieParameter("c2")}},
+				spec.ParameterInHeader: {{Value: spec.NewHeaderParameter("h1")}, {Value: spec.NewHeaderParameter("h2")}},
+				spec.ParameterInQuery:  {{Value: spec.NewQueryParameter("q1")}, {Value: spec.NewQueryParameter("q2")}},
+				spec.ParameterInPath:   {{Value: spec.NewPathParameter("p1")}, {Value: spec.NewPathParameter("p2")}},
 			},
 		},
 	}
@@ -1981,34 +1609,34 @@ func Test_getParametersByIn(t *testing.T) {
 
 func Test_mergeParameters(t *testing.T) {
 	type args struct {
-		parameters  []spec.Parameter
-		parameters2 []spec.Parameter
+		parameters  spec.Parameters
+		parameters2 spec.Parameters
 		path        *field.Path
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  []spec.Parameter
+		want  spec.Parameters
 		want1 []conflict
 	}{
 		{
 			name: "first is nil",
 			args: args{
 				parameters:  nil,
-				parameters2: []spec.Parameter{*spec.HeaderParam("h")},
+				parameters2: spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("h")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 			want1: nil,
 		},
 		{
 			name: "second is nil",
 			args: args{
-				parameters:  []spec.Parameter{*spec.HeaderParam("h")},
+				parameters:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 				parameters2: nil,
 				path:        nil,
 			},
-			want:  []spec.Parameter{*spec.HeaderParam("h")},
+			want:  spec.Parameters{{Value: spec.NewHeaderParameter("h")}},
 			want1: nil,
 		},
 		{
@@ -2024,124 +1652,124 @@ func Test_mergeParameters(t *testing.T) {
 		{
 			name: "non mutual parameters",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1"),
-					*spec.QueryParam("query-1"),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1")},
+					{Value: spec.NewQueryParameter("query-1")},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-2"),
-					*spec.QueryParam("query-2"),
-					*spec.BodyParam(inBodyParameterName, nil),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-2")},
+					{Value: spec.NewQueryParameter("query-2")},
+					{Value: spec.NewHeaderParameter("header")},
 				},
 				path: nil,
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1"),
-				*spec.QueryParam("query-1"),
-				*spec.BodyParam(inBodyParameterName, nil),
-				*spec.HeaderParam("X-Header-2"),
-				*spec.QueryParam("query-2"),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1")},
+				{Value: spec.NewQueryParameter("query-1")},
+				{Value: spec.NewHeaderParameter("header")},
+				{Value: spec.NewHeaderParameter("X-Header-2")},
+				{Value: spec.NewQueryParameter("query-2")},
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual parameters",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewStringSchema()))},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.DateTimeProperty())),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewDateTimeSchema()))},
 				},
 				path: nil,
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-				*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-				*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewStringSchema()))},
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual parameters",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
-					*spec.PathParam("non-mutual-1").Typed(schemaTypeString, ""),
-					*spec.FormDataParam("non-mutual-2").Typed(schemaTypeString, ""),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewStringSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.DateTimeProperty())),
-					*spec.PathParam("non-mutual-3").Typed(schemaTypeString, ""),
-					*spec.FormDataParam("non-mutual-4").Typed(schemaTypeString, ""),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewDateTimeSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
 				},
 				path: nil,
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-				*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-				*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).SetProperty("str", *spec.StringProperty())),
-				*spec.PathParam("non-mutual-1").Typed(schemaTypeString, ""),
-				*spec.FormDataParam("non-mutual-2").Typed(schemaTypeString, ""),
-				*spec.PathParam("non-mutual-3").Typed(schemaTypeString, ""),
-				*spec.FormDataParam("non-mutual-4").Typed(schemaTypeString, ""),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().WithProperty("str", spec.NewStringSchema()))},
+				{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
 			},
 			want1: nil,
 		},
 		{
 			name: "mutual and non mutual parameters with conflicts",
 			args: args{
-				parameters: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-					*spec.QueryParam("query-1").Typed(schemaTypeInteger, ""),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).
-						SetProperty("bool", *spec.BooleanProperty())),
-					*spec.PathParam("non-mutual-1").Typed(schemaTypeString, ""),
-					*spec.FormDataParam("non-mutual-2").Typed(schemaTypeString, ""),
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewInt64Schema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+						WithProperty("bool", spec.NewBoolSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
 				},
-				parameters2: []spec.Parameter{
-					*spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					*spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).
-						SetProperty("str", *spec.DateTimeProperty())),
-					*spec.PathParam("non-mutual-3").Typed(schemaTypeString, ""),
-					*spec.FormDataParam("non-mutual-4").Typed(schemaTypeString, ""),
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+						WithProperty("str", spec.NewDateTimeSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
 				},
 				path: field.NewPath("parameters"),
 			},
-			want: []spec.Parameter{
-				*spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-				*spec.QueryParam("query-1").Typed(schemaTypeInteger, ""),
-				*spec.BodyParam(inBodyParameterName, spec.MapProperty(nil).
-					SetProperty("str", *spec.DateTimeProperty()).
-					SetProperty("bool", *spec.BooleanProperty())),
-				*spec.PathParam("non-mutual-1").Typed(schemaTypeString, ""),
-				*spec.FormDataParam("non-mutual-2").Typed(schemaTypeString, ""),
-				*spec.PathParam("non-mutual-3").Typed(schemaTypeString, ""),
-				*spec.FormDataParam("non-mutual-4").Typed(schemaTypeString, ""),
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
+				{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewInt64Schema())},
+				{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+					WithProperty("str", spec.NewDateTimeSchema()).
+					WithProperty("bool", spec.NewBoolSchema()))},
+				{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
 			},
 			want1: []conflict{
 				{
 					path: field.NewPath("parameters").Child("X-Header-1"),
-					obj1: *spec.HeaderParam("X-Header-1").Typed(schemaTypeBoolean, ""),
-					obj2: *spec.HeaderParam("X-Header-1").Typed(schemaTypeString, "uuid"),
-					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), schemaTypeBoolean,
-						schemaTypeString),
+					obj1: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema()),
+					obj2: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema()),
+					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), spec.TypeBoolean,
+						spec.TypeString),
 				},
 				{
 					path: field.NewPath("parameters").Child("query-1"),
-					obj1: *spec.QueryParam("query-1").Typed(schemaTypeInteger, ""),
-					obj2: *spec.QueryParam("query-1").Typed(schemaTypeString, "uuid"),
-					msg: createConflictMsg(field.NewPath("parameters").Child("query-1"), schemaTypeInteger,
-						schemaTypeString),
+					obj1: spec.NewQueryParameter("query-1").WithSchema(spec.NewInt64Schema()),
+					obj2: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema()),
+					msg: createConflictMsg(field.NewPath("parameters").Child("query-1"), spec.TypeInteger,
+						spec.TypeString),
 				},
 			},
 		},
@@ -2161,55 +1789,55 @@ func Test_mergeParameters(t *testing.T) {
 	}
 }
 
-func sortParam(got []spec.Parameter) {
+func sortParam(got spec.Parameters) {
 	sort.Slice(got, func(i, j int) bool {
 		right := got[i]
 		left := got[j]
 		// Sibling parameters must have unique name + in values
-		return right.Name+right.In < left.Name+left.In
+		return right.Value.Name+right.Value.In < left.Value.Name+left.Value.In
 	})
 }
 
 func Test_appendSecurityIfNeeded(t *testing.T) {
 	type args struct {
-		securityMap          map[string][]string
-		mergedSecurity       []map[string][]string
+		securityMap          spec.SecurityRequirement
+		mergedSecurity       spec.SecurityRequirements
 		ignoreSecurityKeyMap map[string]bool
 	}
 	tests := []struct {
 		name                     string
 		args                     args
-		wantMergedSecurity       []map[string][]string
+		wantMergedSecurity       spec.SecurityRequirements
 		wantIgnoreSecurityKeyMap map[string]bool
 	}{
 		{
 			name: "sanity",
 			args: args{
-				securityMap:          map[string][]string{"key": {"val1", "val2"}},
+				securityMap:          spec.SecurityRequirement{"key": {"val1", "val2"}},
 				mergedSecurity:       nil,
 				ignoreSecurityKeyMap: map[string]bool{},
 			},
-			wantMergedSecurity:       []map[string][]string{{"key": {"val1", "val2"}}},
+			wantMergedSecurity:       spec.SecurityRequirements{{"key": {"val1", "val2"}}},
 			wantIgnoreSecurityKeyMap: map[string]bool{"key": true},
 		},
 		{
 			name: "key should be ignored",
 			args: args{
-				securityMap:          map[string][]string{"key": {"val1", "val2"}},
-				mergedSecurity:       []map[string][]string{{"old-key": {}}},
+				securityMap:          spec.SecurityRequirement{"key": {"val1", "val2"}},
+				mergedSecurity:       spec.SecurityRequirements{{"old-key": {}}},
 				ignoreSecurityKeyMap: map[string]bool{"key": true},
 			},
-			wantMergedSecurity:       []map[string][]string{{"old-key": {}}},
+			wantMergedSecurity:       spec.SecurityRequirements{{"old-key": {}}},
 			wantIgnoreSecurityKeyMap: map[string]bool{"key": true},
 		},
 		{
 			name: "new key should not be ignored, old key should be ignored",
 			args: args{
-				securityMap:          map[string][]string{"old-key": {}, "new key": {"val1", "val2"}},
-				mergedSecurity:       []map[string][]string{{"old-key": {}}},
+				securityMap:          spec.SecurityRequirement{"old-key": {}, "new key": {"val1", "val2"}},
+				mergedSecurity:       spec.SecurityRequirements{{"old-key": {}}},
 				ignoreSecurityKeyMap: map[string]bool{"old-key": true, "key": true},
 			},
-			wantMergedSecurity:       []map[string][]string{{"old-key": {}}, {"new key": {"val1", "val2"}}},
+			wantMergedSecurity:       spec.SecurityRequirements{{"old-key": {}}, {"new key": {"val1", "val2"}}},
 			wantIgnoreSecurityKeyMap: map[string]bool{"old-key": true, "key": true, "new key": true},
 		},
 	}
@@ -2228,47 +1856,47 @@ func Test_appendSecurityIfNeeded(t *testing.T) {
 
 func Test_mergeOperationSecurity(t *testing.T) {
 	type args struct {
-		security  []map[string][]string
-		security2 []map[string][]string
+		security  *spec.SecurityRequirements
+		security2 *spec.SecurityRequirements
 	}
 	tests := []struct {
 		name string
 		args args
-		want []map[string][]string
+		want *spec.SecurityRequirements
 	}{
 		{
 			name: "no merge is needed",
 			args: args{
-				security:  []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}},
-				security2: []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}},
+				security:  &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}},
+				security2: &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}},
 			},
-			want: []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}},
+			want: &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}},
 		},
 		{
 			name: "full merge",
 			args: args{
-				security:  []map[string][]string{{"key1": {}}},
-				security2: []map[string][]string{{"key2": {"val1", "val2"}}},
+				security:  &spec.SecurityRequirements{{"key1": {}}},
+				security2: &spec.SecurityRequirements{{"key2": {"val1", "val2"}}},
 			},
-			want: []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}},
+			want: &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}},
 		},
 		{
 			name: "second list is a sub list of the first - result should be the first list",
 			args: args{
-				security:  []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}, {"key3": {}}},
-				security2: []map[string][]string{{"key2": {"val1", "val2"}}},
+				security:  &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}, {"key3": {}}},
+				security2: &spec.SecurityRequirements{{"key2": {"val1", "val2"}}},
 			},
-			want: []map[string][]string{{"key1": {}}, {"key2": {"val1", "val2"}}, {"key3": {}}},
+			want: &spec.SecurityRequirements{{"key1": {}}, {"key2": {"val1", "val2"}}, {"key3": {}}},
 		},
 		{
 			name: "first list is provided as an AND - output as OR",
 			args: args{
-				security: []map[string][]string{
+				security: &spec.SecurityRequirements{
 					{"key1": {} /*AND*/, "key2": {"val1", "val2"}},
 				},
-				security2: []map[string][]string{{"key2": {"val1", "val2"}}},
+				security2: &spec.SecurityRequirements{{"key2": {"val1", "val2"}}},
 			},
-			want: []map[string][]string{
+			want: &spec.SecurityRequirements{
 				{"key1": {}},
 				/*OR*/
 				{"key2": {"val1", "val2"}},
@@ -2279,11 +1907,155 @@ func Test_mergeOperationSecurity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := mergeOperationSecurity(tt.args.security, tt.args.security2)
 			sort.Slice(got, func(i, j int) bool {
-				_, ok := got[i]["key1"]
+				_, ok := (*got)[i]["key1"]
 				return ok
 			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("mergeOperationSecurity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isEmptyRequestBody(t *testing.T) {
+	nonEmptyContent := spec.NewContent()
+	nonEmptyContent["test"] = spec.NewMediaType()
+	type args struct {
+		body *spec.RequestBodyRef
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "body == nil",
+			args: args{
+				body: nil,
+			},
+			want: true,
+		},
+		{
+			name: "body.Value == nil",
+			args: args{
+				body: &spec.RequestBodyRef{Value: nil},
+			},
+			want: true,
+		},
+		{
+			name: "len(body.Value.Content) == 0",
+			args: args{
+				body: &spec.RequestBodyRef{Value: spec.NewRequestBody().WithContent(nil)},
+			},
+			want: true,
+		},
+		{
+			name: "len(body.Value.Content) == 0",
+			args: args{
+				body: &spec.RequestBodyRef{Value: spec.NewRequestBody().WithContent(spec.Content{})},
+			},
+			want: true,
+		},
+		{
+			name: "not empty",
+			args: args{
+				body: &spec.RequestBodyRef{Value: spec.NewRequestBody().WithContent(nonEmptyContent)},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isEmptyRequestBody(tt.args.body); got != tt.want {
+				t.Errorf("isEmptyRequestBody() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_shouldReturnIfEmptyRequestBody(t *testing.T) {
+	nonEmptyContent := spec.NewContent()
+	nonEmptyContent["test"] = spec.NewMediaType()
+	reqBody := &spec.RequestBodyRef{Value: spec.NewRequestBody().WithContent(nonEmptyContent)}
+	type args struct {
+		body  *spec.RequestBodyRef
+		body2 *spec.RequestBodyRef
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  *spec.RequestBodyRef
+		want1 bool
+	}{
+		{
+			name: "first body is nil",
+			args: args{
+				body:  nil,
+				body2: reqBody,
+			},
+			want:  reqBody,
+			want1: true,
+		},
+		{
+			name: "second body is nil",
+			args: args{
+				body:  reqBody,
+				body2: nil,
+			},
+			want:  reqBody,
+			want1: true,
+		},
+		{
+			name: "both bodies non nil",
+			args: args{
+				body:  reqBody,
+				body2: reqBody,
+			},
+			want:  nil,
+			want1: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := shouldReturnIfEmptyRequestBody(tt.args.body, tt.args.body2)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("shouldReturnIfEmptyRequestBody() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("shouldReturnIfEmptyRequestBody() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_mergeRequestBody(t *testing.T) {
+	type args struct {
+		body  *spec.RequestBodyRef
+		body2 *spec.RequestBodyRef
+		path  *field.Path
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  *spec.RequestBodyRef
+		want1 []conflict
+	}{
+		{
+			name:  "",
+			args:  args{},
+			want:  nil,
+			want1: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Errorf("TODO")
+			got, got1 := mergeRequestBody(tt.args.body, tt.args.body2, tt.args.path)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mergeRequestBody() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("mergeRequestBody() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}

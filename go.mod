@@ -3,17 +3,16 @@ module github.com/openclarity/speculator
 go 1.15
 
 require (
+	github.com/getkin/kin-openapi v0.94.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-openapi/loads v0.21.0
-	github.com/go-openapi/runtime v0.21.0 // indirect
 	github.com/go-openapi/spec v0.20.4
-	github.com/go-openapi/strfmt v0.21.0
 	github.com/go-openapi/swag v0.19.15
-	github.com/go-openapi/validate v0.20.3
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/onsi/gomega v1.14.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/satori/go.uuid v1.2.0
+	github.com/sergi/go-diff v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/viper v1.8.1

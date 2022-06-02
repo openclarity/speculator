@@ -16,40 +16,14 @@
 package spec
 
 const (
-	parametersInBody   = "body"
-	parametersInHeader = "header"
-	parametersInQuery  = "query"
-	parametersInForm   = "formData"
-	parametersInPath   = "path"
-)
-
-const (
 	formatUUID = "uuid"
-)
-
-const (
-	schemaTypeObject  = "object"
-	schemaTypeArray   = "array"
-	schemaTypeBoolean = "boolean"
-	schemaTypeInteger = "integer"
-	schemaTypeNumber  = "number"
-	schemaTypeString  = "string"
-)
-
-const inBodyParameterName = "body"
-
-const (
-	collectionFormatComma = "csv"
-	collectionFormatSpace = "ssv"
-	collectionFormatTab   = "tsv"
-	collectionFormatPipe  = "pipes"
-	collectionFormatMulti = "multi"
 )
 
 const (
 	contentTypeHeaderName       = "content-type"
 	acceptTypeHeaderName        = "accept"
 	authorizationTypeHeaderName = "authorization"
+	cookieTypeHeaderName        = "cookie"
 )
 
 const (
@@ -57,9 +31,4 @@ const (
 	mediaTypeApplicationHalJSON = "application/hal+json"
 	mediaTypeApplicationForm    = "application/x-www-form-urlencoded"
 	mediaTypeMultipartFormData  = "multipart/form-data"
-)
-
-const (
-	apiKeyInHeader = "header"
-	apiKeyInQuery  = "query"
 )

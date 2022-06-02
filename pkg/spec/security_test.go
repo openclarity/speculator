@@ -19,123 +19,123 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
-func createOperationWithSecurity(sec []map[string][]string) *spec.Operation {
-	operation := spec.NewOperation("")
+func createOperationWithSecurity(sec *spec.SecurityRequirements) *spec.Operation {
+	operation := spec.NewOperation()
 	operation.Security = sec
 	return operation
 }
 
 func Test_updateSecurityDefinitionsFromOperation(t *testing.T) {
 	type args struct {
-		sd spec.SecurityDefinitions
-		op *spec.Operation
+		securitySchemes spec.SecuritySchemes
+		op              *spec.Operation
 	}
 	tests := []struct {
 		name string
 		args args
-		want spec.SecurityDefinitions
+		want spec.SecuritySchemes
 	}{
 		{
 			name: "OAuth2 OR BasicAuth",
 			args: args{
-				sd: spec.SecurityDefinitions{},
-				op: createOperationWithSecurity([]map[string][]string{
+				securitySchemes: spec.SecuritySchemes{},
+				op: createOperationWithSecurity(&spec.SecurityRequirements{
 					{
-						OAuth2SecurityDefinitionKey: {"admin"},
+						OAuth2SecuritySchemeKey: {"admin"},
 					},
 					{
-						BasicAuthSecurityDefinitionKey: {},
+						BasicAuthSecuritySchemeKey: {},
 					},
 				}),
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "OAuth2 AND BasicAuth",
 			args: args{
-				sd: spec.SecurityDefinitions{},
-				op: createOperationWithSecurity([]map[string][]string{
+				securitySchemes: spec.SecuritySchemes{},
+				op: createOperationWithSecurity(&spec.SecurityRequirements{
 					{
-						OAuth2SecurityDefinitionKey:    {"admin"},
-						BasicAuthSecurityDefinitionKey: {},
+						OAuth2SecuritySchemeKey:    {"admin"},
+						BasicAuthSecuritySchemeKey: {},
 					},
 				}),
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "OAuth2 AND BasicAuth OR BasicAuth",
 			args: args{
-				sd: spec.SecurityDefinitions{},
-				op: createOperationWithSecurity([]map[string][]string{
+				securitySchemes: spec.SecuritySchemes{},
+				op: createOperationWithSecurity(&spec.SecurityRequirements{
 					{
-						OAuth2SecurityDefinitionKey:    {"admin"},
-						BasicAuthSecurityDefinitionKey: {},
+						OAuth2SecuritySchemeKey:    {"admin"},
+						BasicAuthSecuritySchemeKey: {},
 					},
 					{
-						BasicAuthSecurityDefinitionKey: {},
+						BasicAuthSecuritySchemeKey: {},
 					},
 				}),
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
-			name: "Unsupported SecurityDefinition key - no change to sd",
+			name: "Unsupported SecurityDefinition key - no change to securitySchemes",
 			args: args{
-				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				securitySchemes: spec.SecuritySchemes{
+					OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 				},
-				op: createOperationWithSecurity([]map[string][]string{
+				op: createOperationWithSecurity(&spec.SecurityRequirements{
 					{
 						"unsupported": {"admin"},
 					},
 				}),
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 			},
 		},
 		{
-			name: "nil operation - no change to sd",
+			name: "nil operation - no change to securitySchemes",
 			args: args{
-				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				securitySchemes: spec.SecuritySchemes{
+					OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 				},
 				op: nil,
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 			},
 		},
 		{
-			name: "operation without security - no change to sd",
+			name: "operation without security - no change to securitySchemes",
 			args: args{
-				sd: spec.SecurityDefinitions{
-					OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+				securitySchemes: spec.SecuritySchemes{
+					OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 				},
 				op: createOperationWithSecurity(nil),
 			},
-			want: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+			want: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := updateSecurityDefinitionsFromOperation(tt.args.sd, tt.args.op); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("updateSecurityDefinitionsFromOperation() = %v, want %v", got, tt.want)
+			if got := updateSecuritySchemesFromOperation(tt.args.securitySchemes, tt.args.op); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("updateSecuritySchemesFromOperation() = %v, want %v", got, tt.want)
 			}
 		})
 	}

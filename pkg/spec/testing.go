@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"testing"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	"gotest.tools/assert"
 )
 
@@ -44,23 +44,11 @@ var combinedReq = `{"active":true,"statusCodes":["NO_METRICS_SERVER"],
 var combinedRes = `{"cvss":[{"score":7.8,"vector":"AV:L/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H","version":"3"}]}`
 
 type TestSpec struct {
-	Spec *oapi_spec.Swagger
+	Doc *oapi_spec.T
 }
 
-func NewTestSpec() *TestSpec {
-	return &TestSpec{
-		Spec: &oapi_spec.Swagger{
-			SwaggerProps: oapi_spec.SwaggerProps{
-				Paths: &oapi_spec.Paths{
-					Paths: map[string]oapi_spec.PathItem{},
-				},
-			},
-		},
-	}
-}
-
-func (t *TestSpec) WithPathItem(path string, pathItem oapi_spec.PathItem) *TestSpec {
-	t.Spec.Paths.Paths[path] = pathItem
+func (t *TestSpec) WithPathItem(path string, pathItem *oapi_spec.PathItem) *TestSpec {
+	t.Doc.Paths[path] = pathItem
 	return t
 }
 
@@ -70,15 +58,13 @@ type TestPathItem struct {
 
 func NewTestPathItem() *TestPathItem {
 	return &TestPathItem{
-		PathItem: oapi_spec.PathItem{
-			PathItemProps: oapi_spec.PathItemProps{},
-		},
+		PathItem: oapi_spec.PathItem{},
 	}
 }
 
-func (t *TestPathItem) WithPathParams(name, tpe, format string) *TestPathItem {
-	pathParam := createPathParam(name, tpe, format)
-	t.PathItem.Parameters = append(t.PathItem.Parameters, *pathParam.Parameter)
+func (t *TestPathItem) WithPathParams(name string, schema *oapi_spec.Schema) *TestPathItem {
+	pathParam := createPathParam(name, schema)
+	t.PathItem.Parameters = append(t.PathItem.Parameters, &oapi_spec.ParameterRef{Value: pathParam.Parameter})
 	return t
 }
 
@@ -108,8 +94,8 @@ type TestOperation struct {
 
 func NewOperation(t *testing.T, data *HTTPInteractionData) *TestOperation {
 	t.Helper()
-	sd := oapi_spec.SecurityDefinitions{}
-	operation, err := CreateTestNewOperationGenerator().GenerateSpecOperation(data, sd)
+	securitySchemes := oapi_spec.SecuritySchemes{}
+	operation, err := CreateTestNewOperationGenerator().GenerateSpecOperation(data, securitySchemes)
 	assert.NilError(t, err)
 	return &TestOperation{
 		Op: operation,
@@ -126,6 +112,79 @@ var testOperationGeneratorConfig = OperationGeneratorConfig{
 }
 
 func (op *TestOperation) Deprecated() *TestOperation {
-	op.Op.Deprecate()
+	op.Op.Deprecated = true
 	return op
+}
+
+func (op *TestOperation) WithResponse(status int, response *oapi_spec.Response) *TestOperation {
+	op.Op.AddResponse(status, response)
+	return op
+}
+
+func (op *TestOperation) WithParameter(param *oapi_spec.Parameter) *TestOperation {
+	op.Op.AddParameter(param)
+	return op
+}
+
+func (op *TestOperation) WithRequestBody(requestBody *oapi_spec.RequestBody) *TestOperation {
+	op.Op.RequestBody.Value = requestBody
+	return op
+}
+
+func (op *TestOperation) WithSecurityRequirement(securityRequirement oapi_spec.SecurityRequirement) *TestOperation {
+	if op.Op.Security == nil {
+		op.Op.Security = oapi_spec.NewSecurityRequirements()
+	}
+	op.Op.Security.With(securityRequirement)
+	return op
+}
+
+func createTestOperation() *TestOperation {
+	return &TestOperation{Op: oapi_spec.NewOperation()}
+}
+
+type TestResponse struct {
+	*oapi_spec.Response
+}
+
+func createTestResponse() *TestResponse {
+	return &TestResponse{
+		Response: oapi_spec.NewResponse(),
+	}
+}
+
+func (r *TestResponse) WithHeader(name string, schema *oapi_spec.Schema) *TestResponse {
+	r.Response.Headers[name] = &oapi_spec.HeaderRef{
+		Value: &oapi_spec.Header{
+			Parameter: oapi_spec.Parameter{
+				Schema: &oapi_spec.SchemaRef{
+					Value: schema,
+				},
+			},
+		},
+	}
+	return r
+}
+
+func (r *TestResponse) WithJSONSchema(schema *oapi_spec.Schema) *TestResponse {
+	r.Response.WithJSONSchema(schema)
+	return r
+}
+
+type TestResponses struct {
+	oapi_spec.Responses
+}
+
+func createTestResponses() *TestResponses {
+	return &TestResponses{
+		Responses: oapi_spec.NewResponses(),
+	}
+}
+
+func (r *TestResponses) WithResponse(code string, response *oapi_spec.Response) *TestResponses {
+	r.Responses[code] = &oapi_spec.ResponseRef{
+		Value: response,
+	}
+
+	return r
 }

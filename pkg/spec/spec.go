@@ -20,11 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	"github.com/ghodss/yaml"
-	"github.com/go-openapi/loads"
-	oapi_spec "github.com/go-openapi/spec"
-	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/validate"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 
@@ -108,7 +105,7 @@ func (s *Spec) HasApprovedSpec() bool {
 }
 
 func (s *Spec) HasProvidedSpec() bool {
-	if s.ProvidedSpec == nil || s.ProvidedSpec.Spec == nil || s.ProvidedSpec.Spec.Paths == nil || s.ProvidedSpec.Spec.Paths.Paths == nil {
+	if s.ProvidedSpec == nil || s.ProvidedSpec.Doc == nil || s.ProvidedSpec.Doc.Paths == nil {
 		return false
 	}
 
@@ -120,12 +117,12 @@ func (s *Spec) UnsetApprovedSpec() {
 	defer s.lock.Unlock()
 
 	s.ApprovedSpec = &ApprovedSpec{
-		PathItems:           map[string]*oapi_spec.PathItem{},
-		SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{},
+		PathItems:       make(oapi_spec.Paths),
+		SecuritySchemes: make(oapi_spec.SecuritySchemes),
 	}
 	s.LearningSpec = &LearningSpec{
-		PathItems:           map[string]*oapi_spec.PathItem{},
-		SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{},
+		PathItems:       make(oapi_spec.Paths),
+		SecuritySchemes: make(oapi_spec.SecuritySchemes),
 	}
 	s.ApprovedPathTrie = pathtrie.New()
 }
@@ -145,7 +142,7 @@ func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	method := telemetry.Request.Method
 	// remove query params if exists
 	path, _ := GetPathAndQuery(telemetry.Request.Path)
-	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecurityDefinitions)
+	telemetryOp, err := s.telemetryToOperation(telemetry, s.LearningSpec.SecuritySchemes)
 	if err != nil {
 		return fmt.Errorf("failed to convert telemetry to operation. %v", err)
 	}
@@ -188,37 +185,36 @@ func (s *Spec) GenerateOASYaml() ([]byte, error) {
 
 func (s *Spec) GenerateOASJson() ([]byte, error) {
 	// yaml.Marshal does not omit empty fields
-	var definitions oapi_spec.Definitions
+	var schemas oapi_spec.Schemas
 
 	clonedApprovedSpec, err := s.ApprovedSpec.Clone()
 	if err != nil {
 		return nil, fmt.Errorf("failed to clone approved spec. %v", err)
 	}
 
-	clonedApprovedSpec.PathItems, definitions = reconstructObjectRefs(clonedApprovedSpec.PathItems)
+	clonedApprovedSpec.PathItems, schemas = reconstructObjectRefs(clonedApprovedSpec.PathItems)
 
-	generatedSpec := &oapi_spec.Swagger{
-		SwaggerProps: oapi_spec.SwaggerProps{
-			Host:    s.Host + ":" + s.Port,
-			Swagger: "2.0",
-			Info:    createDefaultSwaggerInfo(),
-			Paths: &oapi_spec.Paths{
-				Paths: map[string]oapi_spec.PathItem{},
-			},
-			Definitions:         definitions,
-			SecurityDefinitions: clonedApprovedSpec.SecurityDefinitions,
+	generatedSpec := &oapi_spec.T{
+		OpenAPI: "3.0.0",
+		Components: oapi_spec.Components{
+			Schemas: schemas,
 		},
-	}
-
-	for path, approvedPathItem := range clonedApprovedSpec.PathItems {
-		generatedSpec.Paths.Paths[path] = *approvedPathItem
+		Info:  createDefaultSwaggerInfo(),
+		Paths: clonedApprovedSpec.PathItems,
+		Servers: oapi_spec.Servers{
+			{
+				// https://swagger.io/docs/specification/api-host-and-base-path/
+				URL: "http://" + s.Host + ":" + s.Port,
+			},
+		},
 	}
 
 	ret, err := json.Marshal(generatedSpec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 	}
-	if err := validateRawJSONSpec(ret); err != nil {
+
+	if _, err = loadAndValidateRawJSONSpec(ret); err != nil {
 		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
 		return nil, fmt.Errorf("failed to validate the spec. %w", err)
 	}
@@ -244,28 +240,32 @@ func (s *Spec) SpecInfoClone() (*Spec, error) {
 	}, nil
 }
 
-func validateRawJSONSpec(spec []byte) error {
-	doc, err := loads.Analyzed(spec, "")
+func loadAndValidateRawJSONSpec(spec []byte) (*oapi_spec.T, error) {
+	loader := oapi_spec.NewLoader()
+
+	doc, err := loader.LoadFromData(spec)
 	if err != nil {
-		return fmt.Errorf("failed to analyze spec: %s. %v", spec, err)
+		return nil, fmt.Errorf("failed to load data: %s. %v", spec, err)
 	}
-	err = validate.Spec(doc, strfmt.Default)
+
+	err = doc.Validate(loader.Context)
 	if err != nil {
-		return fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
+		return nil, fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
 	}
-	return nil
+
+	return doc, nil
 }
 
-func reconstructObjectRefs(pathItems map[string]*oapi_spec.PathItem) (retPathItems map[string]*oapi_spec.PathItem, definitions map[string]oapi_spec.Schema) {
+func reconstructObjectRefs(pathItems map[string]*oapi_spec.PathItem) (retPathItems map[string]*oapi_spec.PathItem, schemas oapi_spec.Schemas) {
 	for _, item := range pathItems {
-		definitions, item.Get = updateDefinitions(definitions, item.Get)
-		definitions, item.Put = updateDefinitions(definitions, item.Put)
-		definitions, item.Post = updateDefinitions(definitions, item.Post)
-		definitions, item.Delete = updateDefinitions(definitions, item.Delete)
-		definitions, item.Options = updateDefinitions(definitions, item.Options)
-		definitions, item.Head = updateDefinitions(definitions, item.Head)
-		definitions, item.Patch = updateDefinitions(definitions, item.Patch)
+		schemas, item.Get = updateSchemas(schemas, item.Get)
+		schemas, item.Put = updateSchemas(schemas, item.Put)
+		schemas, item.Post = updateSchemas(schemas, item.Post)
+		schemas, item.Delete = updateSchemas(schemas, item.Delete)
+		schemas, item.Options = updateSchemas(schemas, item.Options)
+		schemas, item.Head = updateSchemas(schemas, item.Head)
+		schemas, item.Patch = updateSchemas(schemas, item.Patch)
 	}
 
-	return pathItems, definitions
+	return pathItems, schemas
 }

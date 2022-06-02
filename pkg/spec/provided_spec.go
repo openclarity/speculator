@@ -16,18 +16,18 @@
 package spec
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/url"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/ghodss/yaml"
-	oapispec "github.com/go-openapi/spec"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"
 )
 
 type ProvidedSpec struct {
-	Spec *oapispec.Swagger
+	Doc *openapi3.T
 }
 
 func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]string) error {
@@ -38,27 +38,17 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 		return fmt.Errorf("failed to convert provided spec into json: %s. %v", providedSpec, err)
 	}
 
-	if err := validateRawJSONSpec(jsonSpec); err != nil {
+	doc, err := loadAndValidateRawJSONSpec(jsonSpec)
+	if err != nil {
 		log.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
 		return fmt.Errorf("provided spec is not valid. %w", err)
 	}
-	s.ProvidedSpec = &ProvidedSpec{
-		Spec: &oapispec.Swagger{
-			SwaggerProps: oapispec.SwaggerProps{
-				Paths: &oapispec.Paths{
-					Paths: map[string]oapispec.PathItem{},
-				},
-			},
-		},
-	}
 
-	if err := json.Unmarshal(jsonSpec, s.ProvidedSpec.Spec); err != nil {
-		return fmt.Errorf("failed to unmarshal spec: %v", err)
-	}
+	s.ProvidedSpec.Doc = doc
 
 	// path trie need to be repopulated from start on each new spec
 	s.ProvidedPathTrie = pathtrie.New()
-	for path := range s.ProvidedSpec.Spec.Paths.Paths {
+	for path := range s.ProvidedSpec.Doc.Paths {
 		if pathID, ok := pathToPathID[path]; ok {
 			s.ProvidedPathTrie.Insert(path, pathID)
 		}
@@ -67,9 +57,21 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 	return nil
 }
 
-func (p *ProvidedSpec) GetPathItem(path string) *oapispec.PathItem {
-	if pi, ok := p.Spec.Paths.Paths[path]; ok {
-		return &pi
+func (p *ProvidedSpec) GetPathItem(path string) *openapi3.PathItem {
+	return p.Doc.Paths.Find(path)
+}
+
+func (p *ProvidedSpec) GetBasePath() string {
+	for _, server := range p.Doc.Servers {
+		if server.URL == "" || server.URL == "/" {
+			continue
+		}
+		if u, err := url.Parse(server.URL); err != nil {
+			log.Errorf("failed to parse server url %q: %v", server.URL, err)
+		} else {
+			return u.EscapedPath()
+		}
 	}
-	return nil
+
+	return ""
 }

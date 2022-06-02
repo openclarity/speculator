@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 	"github.com/yudai/gojsondiff"
@@ -80,7 +80,7 @@ func generateQueryParams(t *testing.T, query string) url.Values {
 }
 
 func TestGenerateSpecOperation(t *testing.T) {
-	sd := spec.SecurityDefinitions{}
+	sd := spec.SecuritySchemes{}
 	opGen := CreateTestNewOperationGenerator()
 	operation, err := opGen.GenerateSpecOperation(&HTTPInteractionData{
 		ReqBody:  agentStatusBody,
@@ -119,7 +119,7 @@ func validateOperation(t *testing.T, got *spec.Operation, want string) bool {
 func TestGenerateSpecOperation1(t *testing.T) {
 	defaultOAuth2Scopes := []string{"admin", "write:pets"}
 	defaultOAuth2BearerToken, defaultOAuth2JSON := generateDefaultOAuthToken(defaultOAuth2Scopes)
-	defaultOAuthSecurityScheme := updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
+	defaultOAuthSecurityScheme := NewOAuth2SecurityScheme(defaultOAuth2Scopes)
 	defaultAPIKeyHeaderName := ""
 	for key := range APIKeyNames {
 		defaultAPIKeyHeaderName = key
@@ -134,7 +134,7 @@ func TestGenerateSpecOperation1(t *testing.T) {
 		args       args
 		want       string
 		wantErr    bool
-		expectedSd spec.SecurityDefinitions
+		expectedSd spec.SecuritySchemes
 	}{
 		{
 			name: "Basic authorization req header",
@@ -153,8 +153,8 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"BasicAuth\":[]}],\"consumes\":[\"application/hal+json\"],\"produces\":[\"application/hal+json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
+			expectedSd: spec.SecuritySchemes{
+				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 			wantErr: false,
 		},
@@ -175,8 +175,8 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			expectedSd: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
 			wantErr: false,
 		},
@@ -197,8 +197,8 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			expectedSd: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
 			wantErr: false,
 		},
@@ -218,8 +218,8 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/x-www-form-urlencoded\"],\"produces\":[\"application/json\"],\"parameters\":[{\"type\":\"string\",\"name\":\"key\",\"in\":\"formData\"}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			expectedSd: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
 			wantErr: false,
 		},
@@ -241,9 +241,9 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"OAuth2\":" + defaultOAuth2JSON + "}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
+			expectedSd: spec.SecuritySchemes{
 				// Note: Auth Header will be used before Query Parameter is ignored.
-				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
 			wantErr: false,
 		},
@@ -264,8 +264,8 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultAPIKeyHeaderName, apiKeyInHeader),
+			expectedSd: spec.SecuritySchemes{
+				APIKeyAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewAPIKeySecuritySchemeInHeader(defaultAPIKeyHeaderName)},
 			},
 			wantErr: false,
 		},
@@ -286,15 +286,15 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				},
 			},
 			want: "{\"security\":[{\"ApiKeyAuth\":[]}],\"consumes\":[\"application/json\"],\"produces\":[\"application/json\"],\"parameters\":[{\"name\":\"body\",\"in\":\"body\",\"schema\":{\"type\":\"object\",\"properties\":{\"active\":{\"type\":\"boolean\"},\"certificateVersion\":{\"type\":\"string\",\"format\":\"uuid\"},\"controllerInstanceInfo\":{\"type\":\"object\",\"properties\":{\"replicaId\":{\"type\":\"string\"}}},\"policyAndAppVersion\":{\"type\":\"integer\",\"format\":\"int64\"},\"statusCodes\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"version\":{\"type\":\"string\"}}}}],\"responses\":{\"200\":{\"description\":\"\",\"schema\":{\"type\":\"object\",\"properties\":{\"cvss\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"score\":{\"type\":\"number\",\"format\":\"double\"},\"vector\":{\"type\":\"string\"},\"version\":{\"type\":\"string\"}}}}}}},\"default\":{\"description\":\"Default Response\",\"schema\":{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\"}}}}}}",
-			expectedSd: spec.SecurityDefinitions{
-				APIKeyAuthSecurityDefinitionKey: spec.APIKeyAuth(defaultAPIKeyHeaderName, apiKeyInQuery),
+			expectedSd: spec.SecuritySchemes{
+				APIKeyAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewAPIKeySecuritySchemeInQuery(defaultAPIKeyHeaderName)},
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sd := spec.SecurityDefinitions{}
+			sd := spec.SecuritySchemes{}
 			got, err := opGen.GenerateSpecOperation(tt.args.data, sd)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateSpecOperation() error = %v, wantErr %v", err, tt.wantErr)
@@ -324,63 +324,63 @@ func Test_getStringSchema(t *testing.T) {
 			args: args{
 				value: "2017-07-21",
 			},
-			wantSchema: spec.DateProperty(),
+			wantSchema: spec.NewStringSchema().WithFormat("date"),
 		},
 		{
 			name: "time",
 			args: args{
 				value: "17:32:28",
 			},
-			wantSchema: spec.StrFmtProperty("time"),
+			wantSchema: spec.NewStringSchema().WithFormat("time"),
 		},
 		{
 			name: "date-time",
 			args: args{
 				value: "2017-07-21T17:32:28Z",
 			},
-			wantSchema: spec.DateTimeProperty(),
+			wantSchema: spec.NewDateTimeSchema(),
 		},
 		{
 			name: "email",
 			args: args{
 				value: "test@securecn.com",
 			},
-			wantSchema: spec.StrFmtProperty("email"),
+			wantSchema: spec.NewStringSchema().WithFormat("email"),
 		},
 		{
 			name: "ipv4",
 			args: args{
 				value: "1.1.1.1",
 			},
-			wantSchema: spec.StrFmtProperty("ipv4"),
+			wantSchema: spec.NewStringSchema().WithFormat("ipv4"),
 		},
 		{
 			name: "ipv6",
 			args: args{
 				value: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
 			},
-			wantSchema: spec.StrFmtProperty("ipv6"),
+			wantSchema: spec.NewStringSchema().WithFormat("ipv6"),
 		},
 		{
 			name: "uuid",
 			args: args{
 				value: "123e4567-e89b-12d3-a456-426614174000",
 			},
-			wantSchema: spec.StrFmtProperty("uuid"),
+			wantSchema: spec.NewStringSchema().WithFormat("uuid"),
 		},
 		{
 			name: "json-pointer",
 			args: args{
 				value: "/k%22l",
 			},
-			wantSchema: spec.StrFmtProperty("json-pointer"),
+			wantSchema: spec.NewStringSchema().WithFormat("json-pointer"),
 		},
 		{
 			name: "string",
 			args: args{
 				value: "it is very hard to get a simple string",
 			},
-			wantSchema: spec.StringProperty(),
+			wantSchema: spec.NewStringSchema(),
 		},
 	}
 	for _, tt := range tests {
@@ -406,14 +406,14 @@ func Test_getNumberSchema(t *testing.T) {
 			args: args{
 				value: json.Number("85"),
 			},
-			wantSchema: spec.Int64Property(),
+			wantSchema: spec.NewInt64Schema(),
 		},
 		{
 			name: "float",
 			args: args{
 				value: json.Number("85.1"),
 			},
-			wantSchema: spec.Float64Property(),
+			wantSchema: spec.NewFloat64Schema(),
 		},
 	}
 	for _, tt := range tests {
@@ -471,13 +471,13 @@ func TestCloneOperation(t *testing.T) {
 		{
 			name: "sanity",
 			args: args{
-				op: spec.NewOperation("").
-					AddParam(spec.HeaderParam("header")).
-					RespondsWith(200, spec.ResponseRef("test")),
+				op: createTestOperation().
+					WithParameter(spec.NewHeaderParameter("header")).
+					WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.HeaderParam("header")).
-				RespondsWith(200, spec.ResponseRef("test")),
+			want: createTestOperation().
+				WithParameter(spec.NewHeaderParameter("header")).
+				WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
 			wantErr: false,
 		},
 	}
@@ -504,57 +504,57 @@ func TestCloneOperation(t *testing.T) {
 
 func Test_handleAuthReqHeader(t *testing.T) {
 	type args struct {
-		operation *spec.Operation
-		sd        spec.SecurityDefinitions
-		value     string
+		operation       *spec.Operation
+		securitySchemes spec.SecuritySchemes
+		value           string
 	}
 	defaultOAuth2Scopes := []string{"superman", "write:novel"}
 	defaultOAuth2BearerToken, _ := generateDefaultOAuthToken(defaultOAuth2Scopes)
-	defaultOAuthSecurityScheme := updateSecuritySchemeScopes(spec.OAuth2AccessToken(authorizationURL, tknURL), defaultOAuth2Scopes, []string{})
+	defaultOAuthSecurityScheme := NewOAuth2SecurityScheme(defaultOAuth2Scopes)
 	tests := []struct {
 		name   string
 		args   args
 		wantOp *spec.Operation
-		wantSd spec.SecurityDefinitions
+		wantSd spec.SecuritySchemes
 	}{
 		{
 			name: "BearerAuthPrefix",
 			args: args{
-				operation: spec.NewOperation(""),
-				sd:        map[string]*spec.SecurityScheme{},
-				value:     BearerAuthPrefix + defaultOAuth2BearerToken,
+				operation:       spec.NewOperation(),
+				securitySchemes: spec.SecuritySchemes{},
+				value:           BearerAuthPrefix + defaultOAuth2BearerToken,
 			},
-			wantOp: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, defaultOAuth2Scopes...),
-			wantSd: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: defaultOAuthSecurityScheme,
+			wantOp: createTestOperation().WithSecurityRequirement(map[string][]string{OAuth2SecuritySchemeKey: defaultOAuth2Scopes}).Op,
+			wantSd: spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey: &spec.SecuritySchemeRef{Value: defaultOAuthSecurityScheme},
 			},
 		},
 		{
 			name: "BasicAuthPrefix",
 			args: args{
-				operation: spec.NewOperation(""),
-				sd:        map[string]*spec.SecurityScheme{},
-				value:     BasicAuthPrefix + "token",
+				operation:       spec.NewOperation(),
+				securitySchemes: spec.SecuritySchemes{},
+				value:           BasicAuthPrefix + "token",
 			},
-			wantOp: spec.NewOperation("").SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...),
-			wantSd: spec.SecurityDefinitions{
-				BasicAuthSecurityDefinitionKey: spec.BasicAuth(),
+			wantOp: createTestOperation().WithSecurityRequirement(map[string][]string{BasicAuthSecuritySchemeKey: {}}).Op,
+			wantSd: spec.SecuritySchemes{
+				BasicAuthSecuritySchemeKey: &spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "ignoring unknown authorization header value",
 			args: args{
-				operation: spec.NewOperation(""),
-				sd:        map[string]*spec.SecurityScheme{},
-				value:     "invalid token",
+				operation:       spec.NewOperation(),
+				securitySchemes: spec.SecuritySchemes{},
+				value:           "invalid token",
 			},
-			wantOp: spec.NewOperation(""),
-			wantSd: map[string]*spec.SecurityScheme{},
+			wantOp: spec.NewOperation(),
+			wantSd: spec.SecuritySchemes{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := handleAuthReqHeader(tt.args.operation, tt.args.sd, tt.args.value)
+			got, got1 := handleAuthReqHeader(tt.args.operation, tt.args.securitySchemes, tt.args.value)
 			if !reflect.DeepEqual(got, tt.wantOp) {
 				t.Errorf("handleAuthReqHeader() got = %v, want %v", got, tt.wantOp)
 			}

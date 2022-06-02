@@ -24,7 +24,7 @@ import (
 	"sync"
 	"testing"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	uuid "github.com/satori/go.uuid"
 	"gotest.tools/assert"
 
@@ -101,7 +101,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					Port: port,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -170,7 +170,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
 							"/api/1":        &NewTestPathItem().WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
 						},
 					},
@@ -241,7 +241,11 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{test}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data).Op).WithPathParams("test", schemaTypeString, "").PathItem,
+							"/user/{test}": &NewTestPathItem().WithOperation(http.MethodGet,
+								NewOperation(t, Data).
+									WithParameter(
+										oapi_spec.NewPathParameter("test").WithSchema(oapi_spec.NewStringSchema())).
+									Op).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -327,9 +331,9 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").PathItem,
+							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
 							"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).WithPathParams("param2", oapi_spec.NewStringSchema()).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -351,14 +355,13 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				Port: port,
 				ID:   uuidVar,
 				ApprovedSpec: &ApprovedSpec{
-					PathItems:           map[string]*oapi_spec.PathItem{},
-					SecurityDefinitions: oapi_spec.SecurityDefinitions{},
+					PathItems:       map[string]*oapi_spec.PathItem{},
+					SecuritySchemes: oapi_spec.SecuritySchemes{},
 				},
 				LearningSpec: &LearningSpec{
 					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op.
-								SecuredWith(OAuth2SecurityDefinitionKey, []string{}...)).PathItem,
+						"/api/1": &NewTestPathItem().WithOperation(http.MethodGet,
+							NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{BasicAuthSecuritySchemeKey: {}}).Op).PathItem,
 						"/api/2": &NewTestPathItem().
 							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 						"/api/foo": &NewTestPathItem().
@@ -371,16 +374,14 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 			args: args{
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op.
-								SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...)).PathItem,
+						"/api/1": &NewTestPathItem().WithOperation(http.MethodGet,
+							NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{BasicAuthSecuritySchemeKey: {}}).Op).PathItem,
 						"/api/2": &NewTestPathItem().
 							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 						"/api/foo": &NewTestPathItem().
 							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/user/1/bar/2": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op.
-								SecuredWith(OAuth2SecurityDefinitionKey, []string{}...)).PathItem,
+						"/user/1/bar/2": &NewTestPathItem().WithOperation(http.MethodGet,
+							NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{OAuth2SecuritySchemeKey: {}}).Op).PathItem,
 					},
 					PathItemsReview: []*ApprovedSpecReviewPathItem{
 						{
@@ -421,13 +422,18 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(BasicAuthSecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").PathItem,
-							"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op.SecuredWith(OAuth2SecurityDefinitionKey, []string{}...)).WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet,
+								NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{BasicAuthSecuritySchemeKey: {}}).
+									WithParameter(oapi_spec.NewPathParameter("param1").WithSchema(oapi_spec.NewStringSchema())).Op).PathItem,
+							"/api/foo": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet,
+								NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{OAuth2SecuritySchemeKey: {}}).
+									WithParameter(oapi_spec.NewPathParameter("param1").WithSchema(oapi_spec.NewStringSchema())).
+									WithParameter(oapi_spec.NewPathParameter("param2").WithSchema(oapi_spec.NewStringSchema())).Op).PathItem,
 						},
-						SecurityDefinitions: map[string]*oapi_spec.SecurityScheme{
-							BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
-							OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
+						SecuritySchemes: oapi_spec.SecuritySchemes{
+							BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
+							OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -726,7 +732,7 @@ func Test_addPathParamsToPathItem(t *testing.T) {
 					"api/2/foo": true,
 				},
 			},
-			wantPathItem: &NewTestPathItem().WithPathParams("param1", schemaTypeInteger, "").PathItem,
+			wantPathItem: &NewTestPathItem().WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
 		},
 		{
 			name: "2 params",
@@ -738,7 +744,7 @@ func Test_addPathParamsToPathItem(t *testing.T) {
 					"api/2/foo/345": true,
 				},
 			},
-			wantPathItem: &NewTestPathItem().WithPathParams("param1", schemaTypeInteger, "").WithPathParams("param2", schemaTypeInteger, "").PathItem,
+			wantPathItem: &NewTestPathItem().WithPathParams("param1", oapi_spec.NewStringSchema()).WithPathParams("param2", oapi_spec.NewStringSchema()).PathItem,
 		},
 	}
 	for _, tt := range tests {
@@ -751,207 +757,191 @@ func Test_addPathParamsToPathItem(t *testing.T) {
 
 func Test_updateSecurityDefinitionsFromPathItem(t *testing.T) {
 	type args struct {
-		sd   oapi_spec.SecurityDefinitions
-		item *oapi_spec.PathItem
+		securitySchemes oapi_spec.SecuritySchemes
+		item            *oapi_spec.PathItem
 	}
 	tests := []struct {
 		name string
 		args args
-		want oapi_spec.SecurityDefinitions
+		want oapi_spec.SecuritySchemes
 	}{
 		{
 			name: "Get operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Get: createOperationWithSecurity([]map[string][]string{
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Get: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Put operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Put: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Put: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Post operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Post: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Post: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Delete operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Delete: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Delete: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Options operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Options: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Options: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Head operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Head: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Head: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Patch operation",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Patch: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-					},
+					Patch: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 		{
 			name: "Multiple operations",
 			args: args{
-				sd: oapi_spec.SecurityDefinitions{},
+				securitySchemes: oapi_spec.SecuritySchemes{},
 				item: &oapi_spec.PathItem{
-					PathItemProps: oapi_spec.PathItemProps{
-						Get: createOperationWithSecurity([]map[string][]string{
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-						Put: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"read"},
-							},
-						}),
-						Post: createOperationWithSecurity([]map[string][]string{
-							{
-								"unsupported": {"read"},
-							},
-						}),
-						Delete: createOperationWithSecurity([]map[string][]string{
-							{
-								OAuth2SecurityDefinitionKey: {"admin"},
-							},
-							{
-								BasicAuthSecurityDefinitionKey: {},
-							},
-						}),
-						Options: createOperationWithSecurity(nil),
-					},
+					Get: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
+					Put: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"read"},
+						},
+					}),
+					Post: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							"unsupported": {"read"},
+						},
+					}),
+					Delete: createOperationWithSecurity(&oapi_spec.SecurityRequirements{
+						{
+							OAuth2SecuritySchemeKey: {"admin"},
+						},
+						{
+							BasicAuthSecuritySchemeKey: {},
+						},
+					}),
+					Options: createOperationWithSecurity(nil),
 				},
 			},
-			want: oapi_spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey:    oapi_spec.OAuth2AccessToken(authorizationURL, tknURL),
-				BasicAuthSecurityDefinitionKey: oapi_spec.BasicAuth(),
+			want: oapi_spec.SecuritySchemes{
+				OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
+				BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := updateSecurityDefinitionsFromPathItem(tt.args.sd, tt.args.item); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("updateSecurityDefinitionsFromPathItem() = %v, want %v", got, tt.want)
+			if got := updateSecuritySchemesFromPathItem(tt.args.securitySchemes, tt.args.item); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("updateSecuritySchemesFromPathItem() = %v, want %v", got, tt.want)
 			}
 		})
 	}

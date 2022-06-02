@@ -16,17 +16,16 @@
 package spec
 
 import (
-	"strconv"
+	"fmt"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/field"
 
 	"github.com/openclarity/speculator/pkg/utils"
-	"github.com/openclarity/speculator/pkg/utils/slice"
 )
 
-var supportedParametersInTypes = []string{parametersInBody, parametersInHeader, parametersInQuery, parametersInForm, parametersInPath}
+var supportedParametersInTypes = []string{spec.ParameterInHeader, spec.ParameterInQuery, spec.ParameterInPath, spec.ParameterInCookie}
 
 func mergeOperation(operation, operation2 *spec.Operation) (*spec.Operation, []conflict) {
 	if op, shouldReturn := shouldReturnIfNil(operation, operation2); shouldReturn {
@@ -35,15 +34,14 @@ func mergeOperation(operation, operation2 *spec.Operation) (*spec.Operation, []c
 
 	var paramConflicts, resConflicts []conflict
 
-	ret := spec.NewOperation("")
+	ret := spec.NewOperation()
 
+	ret.RequestBody, paramConflicts = mergeRequestBody(operation.RequestBody, operation2.RequestBody,
+		field.NewPath("requestBody"))
 	ret.Parameters, paramConflicts = mergeParameters(operation.Parameters, operation2.Parameters,
 		field.NewPath("parameters"))
 	ret.Responses, resConflicts = mergeResponses(operation.Responses, operation2.Responses,
 		field.NewPath("responses"))
-
-	ret.Consumes = slice.RemoveStringDuplicates(append(operation.Consumes, operation2.Consumes...))
-	ret.Produces = slice.RemoveStringDuplicates(append(operation.Produces, operation2.Produces...))
 
 	ret.Security = mergeOperationSecurity(operation.Security, operation2.Security)
 
@@ -56,28 +54,32 @@ func mergeOperation(operation, operation2 *spec.Operation) (*spec.Operation, []c
 	return ret, conflicts
 }
 
-func mergeOperationSecurity(security, security2 []map[string][]string) []map[string][]string {
-	var mergedSecurity []map[string][]string
+func mergeOperationSecurity(security, security2 *spec.SecurityRequirements) *spec.SecurityRequirements {
+	if s, shouldReturn := shouldReturnIfNil(security, security2); shouldReturn {
+		return s.(*spec.SecurityRequirements)
+	}
+
+	var mergedSecurity spec.SecurityRequirements
 
 	ignoreSecurityKeyMap := map[string]bool{}
 
-	for _, securityMap := range security {
+	for _, securityMap := range *security {
 		mergedSecurity, ignoreSecurityKeyMap = appendSecurityIfNeeded(securityMap, mergedSecurity, ignoreSecurityKeyMap)
 	}
-	for _, securityMap := range security2 {
+	for _, securityMap := range *security2 {
 		mergedSecurity, ignoreSecurityKeyMap = appendSecurityIfNeeded(securityMap, mergedSecurity, ignoreSecurityKeyMap)
 	}
 
-	return mergedSecurity
+	return &mergedSecurity
 }
 
-func appendSecurityIfNeeded(securityMap map[string][]string, mergedSecurity []map[string][]string, ignoreSecurityKeyMap map[string]bool) ([]map[string][]string, map[string]bool) {
+func appendSecurityIfNeeded(securityMap spec.SecurityRequirement, mergedSecurity spec.SecurityRequirements, ignoreSecurityKeyMap map[string]bool) (spec.SecurityRequirements, map[string]bool) {
 	for key, values := range securityMap {
 		// ignore if already appended the exact security key
 		if ignoreSecurityKeyMap[key] {
 			continue
 		}
-		// https://swagger.io/docs/specification/2-0/authentication/
+		// https://swagger.io/docs/specification/authentication/
 		// We will treat multiple authentication types as an OR
 		// (Security schemes combined via OR are alternatives – any one can be used in the given context)
 		mergedSecurity = append(mergedSecurity, map[string][]string{key: values})
@@ -87,25 +89,46 @@ func appendSecurityIfNeeded(securityMap map[string][]string, mergedSecurity []ma
 	return mergedSecurity, ignoreSecurityKeyMap
 }
 
-func mergeParameters(parameters, parameters2 []spec.Parameter, path *field.Path) ([]spec.Parameter, []conflict) {
+func mergeRequestBody(body, body2 *spec.RequestBodyRef, path *field.Path) (*spec.RequestBodyRef, []conflict) {
+	if p, shouldReturn := shouldReturnIfEmptyRequestBody(body, body2); shouldReturn {
+		return p, nil
+	}
+
+	content, conflicts := mergeContent(body.Value.Content, body2.Value.Content, path.Child("content"))
+
+	return &spec.RequestBodyRef{
+		Value: spec.NewRequestBody().WithContent(content),
+	}, conflicts
+}
+
+func shouldReturnIfEmptyRequestBody(body, body2 *spec.RequestBodyRef) (*spec.RequestBodyRef, bool) {
+	if isEmptyRequestBody(body) {
+		return body2, true
+	}
+
+	if isEmptyRequestBody(body2) {
+		return body, true
+	}
+
+	return nil, false
+}
+
+func isEmptyRequestBody(body *spec.RequestBodyRef) bool {
+	return body == nil || body.Value == nil || len(body.Value.Content) == 0
+}
+
+func mergeParameters(parameters, parameters2 spec.Parameters, path *field.Path) (spec.Parameters, []conflict) {
 	if p, shouldReturn := shouldReturnIfEmptyParameters(parameters, parameters2); shouldReturn {
 		return p, nil
 	}
 
-	var retParameters []spec.Parameter
+	var retParameters spec.Parameters
 	var retConflicts []conflict
 
 	parametersByIn := getParametersByIn(parameters)
 	parameters2ByIn := getParametersByIn(parameters2)
 	for _, inType := range supportedParametersInTypes {
-		var mergedParameters []spec.Parameter
-		var conflicts []conflict
-
-		if inType == inBodyParameterName {
-			mergedParameters, conflicts = mergeInBodyParameters(parametersByIn[inType], parameters2ByIn[inType], path)
-		} else {
-			mergedParameters, conflicts = mergeParametersByInType(parametersByIn[inType], parameters2ByIn[inType], path)
-		}
+		mergedParameters, conflicts := mergeParametersByInType(parametersByIn[inType], parameters2ByIn[inType], path)
 		retParameters = append(retParameters, mergedParameters...)
 		retConflicts = append(retConflicts, conflicts...)
 	}
@@ -113,27 +136,31 @@ func mergeParameters(parameters, parameters2 []spec.Parameter, path *field.Path)
 	return retParameters, retConflicts
 }
 
-func getParametersByIn(parameters []spec.Parameter) map[string][]spec.Parameter {
-	ret := make(map[string][]spec.Parameter)
+func getParametersByIn(parameters spec.Parameters) map[string]spec.Parameters {
+	ret := make(map[string]spec.Parameters)
 
 	for i, parameter := range parameters {
-		switch parameter.In {
-		case parametersInBody, parametersInHeader, parametersInQuery, parametersInForm, parametersInPath:
-			ret[parameter.In] = append(ret[parameter.In], parameters[i])
+		if parameter.Value == nil {
+			continue
+		}
+
+		switch parameter.Value.In {
+		case spec.ParameterInCookie, spec.ParameterInHeader, spec.ParameterInQuery, spec.ParameterInPath:
+			ret[parameter.Value.In] = append(ret[parameter.Value.In], parameters[i])
 		default:
-			log.Warnf("in parameter not supported. %v", parameter.In)
+			log.Warnf("in parameter not supported. %v", parameter.Value.In)
 		}
 	}
 
 	return ret
 }
 
-func mergeParametersByInType(parameters, parameters2 []spec.Parameter, path *field.Path) ([]spec.Parameter, []conflict) {
+func mergeParametersByInType(parameters, parameters2 spec.Parameters, path *field.Path) (spec.Parameters, []conflict) {
 	if p, shouldReturn := shouldReturnIfEmptyParameters(parameters, parameters2); shouldReturn {
 		return p, nil
 	}
 
-	var retParameters []spec.Parameter
+	var retParameters spec.Parameters
 	var retConflicts []conflict
 
 	parametersMapByName := makeParametersMapByName(parameters)
@@ -141,18 +168,18 @@ func mergeParametersByInType(parameters, parameters2 []spec.Parameter, path *fie
 
 	// go over first parameters list
 	// 1. merge mutual parameters
-	// 2. add non mutual parameters
+	// 2. add non-mutual parameters
 	for name, param := range parametersMapByName {
 		if param2, ok := parameters2MapByName[name]; ok {
-			mergedParameter, conflicts := mergeParameter(param, param2, path.Child(name))
+			mergedParameter, conflicts := mergeParameter(param.Value, param2.Value, path.Child(name))
 			retConflicts = append(retConflicts, conflicts...)
-			retParameters = append(retParameters, mergedParameter)
+			retParameters = append(retParameters, &spec.ParameterRef{Value: mergedParameter})
 		} else {
 			retParameters = append(retParameters, param)
 		}
 	}
 
-	// add non mutual parameters from the second list
+	// add non-mutual parameters from the second list
 	for name, param := range parameters2MapByName {
 		if _, ok := parametersMapByName[name]; !ok {
 			retParameters = append(retParameters, param)
@@ -162,99 +189,57 @@ func mergeParametersByInType(parameters, parameters2 []spec.Parameter, path *fie
 	return retParameters, retConflicts
 }
 
-func mergeInBodyParameters(parameters, parameters2 []spec.Parameter, path *field.Path) ([]spec.Parameter, []conflict) {
-	if p, shouldReturn := shouldReturnIfEmptyParameters(parameters, parameters2); shouldReturn {
-		return p, nil
-	}
-
-	// we can only have a single in body param named 'body' (inBodyParameterName)
-	mergedSchema, conflicts := mergeSchema(parameters[0].Schema, parameters2[0].Schema,
-		path.Child(parameters[0].Name, "schema"))
-
-	return []spec.Parameter{*spec.BodyParam(inBodyParameterName, mergedSchema)}, conflicts
-}
-
-func makeParametersMapByName(parameters []spec.Parameter) map[string]spec.Parameter {
-	ret := make(map[string]spec.Parameter)
+func makeParametersMapByName(parameters spec.Parameters) map[string]*spec.ParameterRef {
+	ret := make(map[string]*spec.ParameterRef)
 
 	for i := range parameters {
-		ret[parameters[i].Name] = parameters[i]
+		ret[parameters[i].Value.Name] = parameters[i]
 	}
 
 	return ret
 }
 
-func mergeParameter(parameter, parameter2 spec.Parameter, path *field.Path) (spec.Parameter, []conflict) {
-	if parameter.Type != parameter2.Type {
+func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*spec.Parameter, []conflict) {
+	if p, shouldReturn := shouldReturnIfEmptyParameter(parameter, parameter2); shouldReturn {
+		return p, nil
+	}
+
+	tpe1, tpe2 := parameter.Schema.Value.Type, parameter2.Schema.Value.Type
+	if tpe1 != tpe2 {
 		return parameter, []conflict{
 			{
 				path: path,
 				obj1: parameter,
 				obj2: parameter2,
-				msg:  createConflictMsg(path, parameter.Type, parameter2.Type),
+				msg:  createConflictMsg(path, tpe1, tpe2),
 			},
 		}
 	}
 
-	switch parameter.Type {
-	case schemaTypeBoolean, schemaTypeInteger, schemaTypeNumber, schemaTypeString:
-		simpleSchema, conflicts := mergeSimpleSchema(parameter.SimpleSchema, parameter2.SimpleSchema, path)
-		parameter.SimpleSchema = simpleSchema
-		return parameter, conflicts
-	case schemaTypeArray:
-		items, conflicts := mergeSimpleSchemaItems(parameter.Items, parameter2.Items, path)
-		parameter.Items = items
-		return parameter, conflicts
+	switch tpe1 {
+	case spec.TypeBoolean, spec.TypeInteger, spec.TypeNumber, spec.TypeString:
+		schema, conflicts := mergeSchema(parameter.Schema.Value, parameter2.Schema.Value, path)
+		return parameter.WithSchema(schema), conflicts
+	case spec.TypeArray:
+		items, conflicts := mergeSchemaItems(parameter.Schema.Value.Items, parameter2.Schema.Value.Items, path)
+		return parameter.WithSchema(items.Value), conflicts
 	case "":
 		// when type is missing it is probably an object - we should try and merge the parameter schema
-		schema, conflicts := mergeSchema(parameter.Schema, parameter2.Schema, path.Child("schema"))
-		parameter.Schema = schema
-		return parameter, conflicts
+		schema, conflicts := mergeSchema(parameter.Schema.Value, parameter2.Schema.Value, path.Child("schema"))
+		return parameter.WithSchema(schema), conflicts
 	default:
-		log.Warnf("not supported schema type in parameter: %v", parameter.Type)
+		log.Warnf("not supported schema type in parameter: %v", tpe1)
 	}
 
 	return parameter, nil
 }
 
-func mergeSimpleSchemaItems(items, items2 *spec.Items, path *field.Path) (*spec.Items, []conflict) {
+func mergeSchemaItems(items, items2 *spec.SchemaRef, path *field.Path) (*spec.SchemaRef, []conflict) {
 	if s, shouldReturn := shouldReturnIfNil(items, items2); shouldReturn {
-		return s.(*spec.Items), nil
+		return s.(*spec.SchemaRef), nil
 	}
-	simpleSchema, conflicts := mergeSimpleSchema(items.SimpleSchema, items2.SimpleSchema, path.Child("items"))
-	items.SimpleSchema = simpleSchema
-	return items, conflicts
-}
-
-func mergeSimpleSchema(simpleSchema, simpleSchema2 spec.SimpleSchema, path *field.Path) (spec.SimpleSchema, []conflict) {
-	if simpleSchema.Type != simpleSchema2.Type {
-		return simpleSchema, []conflict{
-			{
-				path: path,
-				obj1: simpleSchema,
-				obj2: simpleSchema2,
-				msg:  createConflictMsg(path, simpleSchema.Type, simpleSchema2.Type),
-			},
-		}
-	}
-
-	switch simpleSchema.Type {
-	case schemaTypeBoolean, schemaTypeInteger, schemaTypeNumber:
-		return simpleSchema, nil
-	case schemaTypeString:
-		if simpleSchema.Format != simpleSchema2.Format {
-			simpleSchema.Format = ""
-		}
-		return simpleSchema, nil
-	case schemaTypeArray:
-		items, conflicts := mergeSimpleSchemaItems(simpleSchema.Items, simpleSchema2.Items, path)
-		simpleSchema.Items = items
-		return simpleSchema, conflicts
-	default:
-		log.Warnf("not supported schema type in simple schema: %v", simpleSchema.Type)
-	}
-
-	return simpleSchema, nil
+	schema, conflicts := mergeSchema(items.Value, items2.Value, path.Child("items"))
+	return &spec.SchemaRef{Value: schema}, conflicts
 }
 
 func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, []conflict) {
@@ -266,69 +251,59 @@ func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, 
 		return s, nil
 	}
 
-	if schema.Type[0] != schema2.Type[0] {
+	if schema.Type != schema2.Type {
 		return schema, []conflict{
 			{
 				path: path,
 				obj1: schema,
 				obj2: schema2,
-				msg:  createConflictMsg(path, schema.Type[0], schema2.Type[0]),
+				msg:  createConflictMsg(path, schema.Type, schema2.Type),
 			},
 		}
 	}
 
-	switch schema.Type[0] {
-	case schemaTypeBoolean, schemaTypeInteger, schemaTypeNumber:
+	switch schema.Type {
+	case spec.TypeBoolean, spec.TypeInteger, spec.TypeNumber:
 		return schema, nil
-	case schemaTypeString:
+	case spec.TypeString:
 		if schema.Format != schema2.Format {
 			schema.Format = ""
 		}
 		return schema, nil
-	case schemaTypeArray:
+	case spec.TypeArray:
 		items, conflicts := mergeSchemaItems(schema.Items, schema2.Items, path)
 		schema.Items = items
 		return schema, conflicts
-	case schemaTypeObject:
+	case spec.TypeObject:
 		properties, conflicts := mergeProperties(schema.Properties, schema2.Properties, path.Child("properties"))
 		schema.Properties = properties
 		return schema, conflicts
 	default:
-		log.Warnf("not supported schema type in schema: %v", schema.Type[0])
+		log.Warnf("not supported schema type in schema: %v", schema.Type)
 	}
 
 	return schema, nil
 }
 
-func mergeSchemaItems(items, items2 *spec.SchemaOrArray, path *field.Path) (*spec.SchemaOrArray, []conflict) {
-	if s, shouldReturn := shouldReturnIfNil(items, items2); shouldReturn {
-		return s.(*spec.SchemaOrArray), nil
-	}
-
-	mergedSchema, conflicts := mergeSchema(items.Schema, items2.Schema, path.Child("items"))
-	items.Schema = mergedSchema
-	return items, conflicts
-}
-
-func mergeProperties(properties, properties2 spec.SchemaProperties, path *field.Path) (spec.SchemaProperties, []conflict) {
-	retProperties := make(spec.SchemaProperties)
+func mergeProperties(properties, properties2 spec.Schemas, path *field.Path) (spec.Schemas, []conflict) {
+	retProperties := make(spec.Schemas)
 	var retConflicts []conflict
 
 	// go over first properties list
 	// 1. merge mutual properties
-	// 2. add non mutual properties
+	// 2. add non-mutual properties
 	for key := range properties {
 		schema := properties[key]
 		if schema2, ok := properties2[key]; ok {
-			mergedSchema, conflicts := mergeSchema(&schema, &schema2, path.Child(key))
+			mergedSchema, conflicts := mergeSchema(schema.Value, schema2.Value, path.Child(key))
 			retConflicts = append(retConflicts, conflicts...)
-			retProperties[key] = *mergedSchema
+			retProperties[key] = &spec.SchemaRef{Value: mergedSchema}
 		} else {
 			retProperties[key] = schema
 		}
 	}
 
-	// add non mutual properties from the second list
+	// add non-mutual properties from the second list
 	for key, schema := range properties2 {
 		if _, ok := properties[key]; !ok {
 			retProperties[key] = schema
@@ -338,52 +313,44 @@ func mergeProperties(properties, properties2 spec.SchemaProperties, path *field.
 	return retProperties, retConflicts
 }
 
-func mergeResponses(responses, responses2 *spec.Responses, path *field.Path) (*spec.Responses, []conflict) {
-	if r, shouldReturn := shouldReturnIfNil(responses, responses2); shouldReturn {
-		return r.(*spec.Responses), nil
+func mergeResponses(responses, responses2 spec.Responses, path *field.Path) (spec.Responses, []conflict) {
+	if r, shouldReturn := shouldReturnIfEmptyResponses(responses, responses2); shouldReturn {
+		return r, nil
 	}
 
 	var retConflicts []conflict
 
-	retResponses := &spec.Responses{
-		ResponsesProps: spec.ResponsesProps{
-			Default:             responses.Default, // default will be the same because we are generating it
-			StatusCodeResponses: make(map[int]spec.Response),
-		},
-	}
-
-	statusCodeResponses := responses.StatusCodeResponses
-	statusCodeResponses2 := responses2.StatusCodeResponses
+	retResponses := spec.NewResponses()
 
 	// go over first responses list
 	// 1. merge mutual response code responses
-	// 2. add non mutual response code responses
-	for code, response := range statusCodeResponses {
-		if response2, ok := statusCodeResponses2[code]; ok {
-			mergedResponse, conflicts := mergeResponse(response, response2, path.Child(strconv.Itoa(code)))
+	// 2. add non-mutual response code responses
+	for code, response := range responses {
+		if response2, ok := responses2[code]; ok {
+			mergedResponse, conflicts := mergeResponse(response.Value, response2.Value, path.Child(code))
 			retConflicts = append(retConflicts, conflicts...)
-			retResponses.StatusCodeResponses[code] = *mergedResponse
+			retResponses[code] = &spec.ResponseRef{Value: mergedResponse}
 		} else {
-			retResponses.StatusCodeResponses[code] = statusCodeResponses[code]
+			retResponses[code] = responses[code]
 		}
 	}
 
-	// add non mutual parameters from the second list
-	for code := range statusCodeResponses2 {
-		if _, ok := statusCodeResponses[code]; !ok {
-			retResponses.StatusCodeResponses[code] = statusCodeResponses2[code]
+	// add non-mutual parameters from the second list
+	for code := range responses2 {
+		if _, ok := responses[code]; !ok {
+			retResponses[code] = responses2[code]
 		}
 	}
 
 	return retResponses, retConflicts
 }
 
-func mergeResponse(response, response2 spec.Response, path *field.Path) (*spec.Response, []conflict) {
+func mergeResponse(response, response2 *spec.Response, path *field.Path) (*spec.Response, []conflict) {
 	var retConflicts []conflict
 	retResponse := spec.NewResponse()
 
-	schema, conflicts := mergeSchema(response.Schema, response2.Schema, path.Child("schema"))
-	retResponse.Schema = schema
+	content, conflicts := mergeContent(response.Content, response2.Content, path.Child("content"))
+	retResponse.WithContent(content)
 	retConflicts = append(retConflicts, conflicts...)
 
 	headers, conflicts := mergeResponseHeader(response.Headers, response2.Headers, path.Child("headers"))
@@ -393,24 +360,52 @@ func mergeResponse(response, response2 spec.Response, path *field.Path) (*spec.R
 	return retResponse, retConflicts
 }
 
-func mergeResponseHeader(headers, headers2 map[string]spec.Header, path *field.Path) (map[string]spec.Header, []conflict) {
+func mergeContent(content spec.Content, content2 spec.Content, path *field.Path) (spec.Content, []conflict) {
 	var retConflicts []conflict
-	retHeaders := make(map[string]spec.Header)
+	retContent := spec.NewContent()
+
+	// go over first content list
+	// 1. merge mutual content media type
+	// 2. add non-mutual content media type
+	for name, mediaType := range content {
+		if mediaType2, ok := content2[name]; ok {
+			mergedSchema, conflicts := mergeSchema(mediaType.Schema.Value, mediaType2.Schema.Value, path.Child(name))
+			// TODO: handle mediaType.Encoding
+			retConflicts = append(retConflicts, conflicts...)
+			retContent[name] = spec.NewMediaType().WithSchema(mergedSchema)
+		} else {
+			retContent[name] = content[name]
+		}
+	}
+
+	// add non-mutual content media type from the second list
+	for name := range content2 {
+		if _, ok := content[name]; !ok {
+			retContent[name] = content2[name]
+		}
+	}
+
+	return retContent, retConflicts
+}
+
+func mergeResponseHeader(headers, headers2 spec.Headers, path *field.Path) (spec.Headers, []conflict) {
+	var retConflicts []conflict
+	retHeaders := make(spec.Headers)
 
 	// go over first headers list
 	// 1. merge mutual headers
-	// 2. add non mutual headers
+	// 2. add non-mutual headers
 	for name, header := range headers {
 		if header2, ok := headers2[name]; ok {
-			mergedHeader, conflicts := mergeHeader(header, header2, path.Child(name))
+			mergedHeader, conflicts := mergeHeader(header.Value, header2.Value, path.Child(name))
 			retConflicts = append(retConflicts, conflicts...)
-			retHeaders[name] = *mergedHeader
+			retHeaders[name] = &spec.HeaderRef{Value: mergedHeader}
 		} else {
 			retHeaders[name] = headers[name]
 		}
 	}
 
-	// add non mutual headers from the second list
+	// add non-mutual headers from the second list
 	for name := range headers2 {
 		if _, ok := headers[name]; !ok {
 			retHeaders[name] = headers2[name]
@@ -420,16 +415,76 @@ func mergeResponseHeader(headers, headers2 map[string]spec.Header, path *field.P
 	return retHeaders, retConflicts
 }
 
-func mergeHeader(header, header2 spec.Header, child *field.Path) (*spec.Header, []conflict) {
-	retHeader := spec.ResponseHeader()
+func mergeHeader(header, header2 *spec.Header, path *field.Path) (*spec.Header, []conflict) {
+	if h, shouldReturn := shouldReturnIfEmptyHeader(header, header2); shouldReturn {
+		return h, nil
+	}
 
-	simpleSchema, conflicts := mergeSimpleSchema(header.SimpleSchema, header2.SimpleSchema, child)
-	retHeader.SimpleSchema = simpleSchema
+	if header.In != header2.In {
+		return header, []conflict{
+			{
+				path: path,
+				obj1: header,
+				obj2: header2,
+				msg:  fmt.Sprintf("%s: header in mismatch: %+v != %+v", path, header.In, header2.In),
+			},
+		}
+	}
 
-	return retHeader, conflicts
+	schema, conflicts := mergeSchema(header.Schema.Value, header2.Schema.Value, path)
+	header.WithSchema(schema)
+
+	return header, conflicts
 }
 
-func shouldReturnIfEmptyParameters(parameters, parameters2 []spec.Parameter) ([]spec.Parameter, bool) {
+func shouldReturnIfEmptyParameter(param, param2 *spec.Parameter) (*spec.Parameter, bool) {
+	if isEmptyParameter(param) {
+		return param2, true
+	}
+
+	if isEmptyParameter(param2) {
+		return param, true
+	}
+
+	return nil, false
+}
+
+func isEmptyParameter(param *spec.Parameter) bool {
+	return param == nil || isEmptySchemaRef(param.Schema)
+}
+
+func shouldReturnIfEmptyHeader(header, header2 *spec.Header) (*spec.Header, bool) {
+	if isEmptyHeader(header) {
+		return header2, true
+	}
+
+	if isEmptyHeader(header2) {
+		return header, true
+	}
+
+	return nil, false
+}
+
+func isEmptyHeader(header *spec.Header) bool {
+	return header == nil || isEmptySchemaRef(header.Schema)
+}
+
+func isEmptySchemaRef(schemaRef *spec.SchemaRef) bool {
+	return schemaRef == nil || schemaRef.Value == nil
+}
+
+func shouldReturnIfEmptyResponses(r, r2 spec.Responses) (spec.Responses, bool) {
+	if len(r) == 0 {
+		return r2, true
+	}
+	if len(r2) == 0 {
+		return r, true
+	}
+	// both are not empty
+	return nil, false
+}
+
+func shouldReturnIfEmptyParameters(parameters, parameters2 spec.Parameters) (spec.Parameters, bool) {
 	if len(parameters) == 0 {
 		return parameters2, true
 	}

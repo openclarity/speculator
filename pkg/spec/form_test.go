@@ -18,100 +18,118 @@ package spec
 import (
 	"encoding/json"
 	"reflect"
-	"sort"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
-func Test_addApplicationFormParams(t *testing.T) {
+func newBoolSchemaWithAllowEmptyValue() *spec.Schema {
+	schema := spec.NewBoolSchema()
+	schema.AllowEmptyValue = true
+	return schema
+}
+
+func Test_handleApplicationFormURLEncodedBody(t *testing.T) {
 	type args struct {
-		operation *spec.Operation
-		sd        spec.SecurityDefinitions
-		body      string
+		operation       *spec.Operation
+		securitySchemes spec.SecuritySchemes
+		body            string
 	}
 	tests := []struct {
-		name  string
-		args  args
-		want  *spec.Operation
-		want1 spec.SecurityDefinitions
+		name    string
+		args    args
+		want    *spec.Operation
+		want1   spec.SecuritySchemes
+		wantErr bool
 	}{
 		{
 			name: "sanity",
 			args: args{
-				operation: spec.NewOperation(""),
+				operation: spec.NewOperation(),
 				body:      "name=Amy&fav_number=321.1",
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.FormDataParam("name").Typed(schemaTypeString, "")).
-				AddParam(spec.FormDataParam("fav_number").Typed(schemaTypeNumber, "")),
+			want: createTestOperation().WithRequestBody(spec.NewRequestBody().WithSchema(
+				spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+					"name":       spec.NewStringSchema(),
+					"fav_number": spec.NewFloat64Schema(),
+				}), []string{mediaTypeApplicationForm})).Op,
 		},
 		{
 			name: "parameters without a value",
 			args: args{
-				operation: spec.NewOperation(""),
+				operation: spec.NewOperation(),
 				body:      "foo&bar&baz",
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.FormDataParam("foo").Typed(schemaTypeBoolean, "").AllowsEmptyValues().AsRequired()).
-				AddParam(spec.FormDataParam("bar").Typed(schemaTypeBoolean, "").AllowsEmptyValues().AsRequired()).
-				AddParam(spec.FormDataParam("baz").Typed(schemaTypeBoolean, "").AllowsEmptyValues().AsRequired()),
+			want: createTestOperation().WithRequestBody(spec.NewRequestBody().WithSchema(
+				spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+					"foo": newBoolSchemaWithAllowEmptyValue(),
+					"bar": newBoolSchemaWithAllowEmptyValue(),
+					"baz": newBoolSchemaWithAllowEmptyValue(),
+				}), []string{mediaTypeApplicationForm})).Op,
 		},
 		{
 			name: "multiple parameter instances",
 			args: args{
-				operation: spec.NewOperation(""),
+				operation: spec.NewOperation(),
 				body:      "param=value1&param=value2&param=value3",
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.FormDataParam("param").CollectionOf(spec.NewItems().Typed(schemaTypeString, ""), collectionFormatMulti)),
+			want: createTestOperation().WithRequestBody(spec.NewRequestBody().WithSchema(
+				spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+					"param": spec.NewArraySchema().WithItems(spec.NewStringSchema()),
+				}), []string{mediaTypeApplicationForm})).Op,
 		},
 		{
 			name: "bad query",
 			args: args{
-				operation: spec.NewOperation(""),
+				operation: spec.NewOperation(),
 				body:      "name%2",
 			},
-			want: spec.NewOperation(""),
+			want: spec.NewOperation(),
 		},
 		{
 			name: "OAuth2 security",
 			args: args{
-				operation: spec.NewOperation(""),
-				body:      AccessTokenParamKey + "=token",
-				sd:        map[string]*spec.SecurityScheme{},
+				operation:       spec.NewOperation(),
+				body:            AccessTokenParamKey + "=token",
+				securitySchemes: map[string]*spec.SecuritySchemeRef{},
 			},
-			want: spec.NewOperation("").SecuredWith(OAuth2SecurityDefinitionKey, []string{}...),
-			want1: spec.SecurityDefinitions{
-				OAuth2SecurityDefinitionKey: spec.OAuth2AccessToken(authorizationURL, tknURL),
+			want: createTestOperation().WithSecurityRequirement(map[string][]string{OAuth2SecuritySchemeKey: {}}).Op,
+			want1: map[string]*spec.SecuritySchemeRef{
+				OAuth2SecuritySchemeKey: {Value: NewOAuth2SecurityScheme([]string{})},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			op, sd := addApplicationFormParams(tt.args.operation, tt.args.sd, tt.args.body)
-			sort.Slice(op.Parameters, func(i, j int) bool {
-				return op.Parameters[i].Name < op.Parameters[j].Name
-			})
-			sort.Slice(tt.want.Parameters, func(i, j int) bool {
-				return tt.want.Parameters[i].Name < tt.want.Parameters[j].Name
-			})
-			if !reflect.DeepEqual(op, tt.want) {
-				t.Errorf("addApplicationFormParams() = %v, want %v", op, tt.want)
+			op, securitySchemes, err := handleApplicationFormURLEncodedBody(tt.args.operation, tt.args.securitySchemes, tt.args.body)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("handleApplicationFormURLEncodedBody() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if !reflect.DeepEqual(sd, tt.want1) {
-				t.Errorf("addApplicationFormParams() got1 = %v, want %v", marshal(sd), marshal(tt.want1))
+			op = sortParameters(op)
+			tt.want = sortParameters(tt.want)
+			if !reflect.DeepEqual(op, tt.want) {
+				t.Errorf("handleApplicationFormURLEncodedBody() op = %v, want %v", op, tt.want)
+			}
+			if !reflect.DeepEqual(securitySchemes, tt.want1) {
+				t.Errorf("handleApplicationFormURLEncodedBody() securitySchemes = %v, want %v", marshal(securitySchemes), marshal(tt.want1))
 			}
 		})
 	}
 }
 
-var formDataBodyMultiCollection = "--cdce6441022a3dcf\r\n" +
-	"Content-Disposition: form-data; name=\"integer\"\r\n\r\n" +
-	"12\r\n" +
+var formDataBodyMultipleFileUpload = "--cdce6441022a3dcf\r\n" +
+	"Content-Disposition: form-data; name=\"fileName\"; filename=\"file1.txt\"\r\n\r\n" +
+	"Content-Type: text/plain\r\n\r\n" +
+	"File contents go here.\r\n" +
 	"--cdce6441022a3dcf\r\n" +
-	"Content-Disposition: form-data; name=\"integer\"\r\n\r\n" +
-	"13\r\n" +
+	"Content-Disposition: form-data; name=\"fileName\"; filename=\"file2.png\"\r\n\r\n" +
+	"Content-Type: image/png\r\n\r\n" +
+	"File contents go here.\r\n" +
+	"--cdce6441022a3dcf\r\n" +
+	"Content-Disposition: form-data; name=\"fileName\"; filename=\"file3.jpg\"\r\n\r\n" +
+	"Content-Type: image/jpeg\r\n\r\n" +
+	"File contents go here.\r\n" +
 	"--cdce6441022a3dcf--\r\n"
 
 var formDataBody = "--cdce6441022a3dcf\r\n" +
@@ -144,66 +162,57 @@ func Test_addMultipartFormDataParams(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *spec.Operation
+		want    *spec.Schema
 		wantErr bool
 	}{
 		{
 			name: "sanity",
 			args: args{
-				operation: spec.NewOperation(""),
-				body:      formDataBody,
-				params:    map[string]string{"boundary": "cdce6441022a3dcf"},
+				body:   formDataBody,
+				params: map[string]string{"boundary": "cdce6441022a3dcf"},
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.FileParam("upfile")).
-				AddParam(spec.FormDataParam("integer").Typed(schemaTypeInteger, "")).
-				AddParam(spec.FormDataParam("boolean").Typed(schemaTypeBoolean, "")).
-				AddParam(spec.FormDataParam("string").Typed(schemaTypeString, "")).
-				AddParam(spec.FormDataParam("array-to-ignore-expected-string").Typed(schemaTypeString, "")).
-				AddParam(spec.FormDataParam("boolean-empty-value").Typed(schemaTypeBoolean, "").AsRequired().AllowsEmptyValues()),
+			want: spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+				"upfile":                          spec.NewStringSchema().WithFormat("binary"),
+				"integer":                         spec.NewInt64Schema(),
+				"boolean":                         spec.NewBoolSchema(),
+				"string":                          spec.NewStringSchema(),
+				"array-to-ignore-expected-string": spec.NewArraySchema().WithItems(spec.NewStringSchema()),
+				"boolean-empty-value":             newBoolSchemaWithAllowEmptyValue(),
+			}),
 			wantErr: false,
 		},
 		{
-			name: "multi collection format",
+			name: "Multiple File Upload",
 			args: args{
-				operation: spec.NewOperation(""),
-				body:      formDataBodyMultiCollection,
-				params:    map[string]string{"boundary": "cdce6441022a3dcf"},
+				body:   formDataBodyMultipleFileUpload,
+				params: map[string]string{"boundary": "cdce6441022a3dcf"},
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.FormDataParam("integer").CollectionOf(spec.NewItems().Typed(schemaTypeInteger, ""), collectionFormatMulti)),
+			want: spec.NewObjectSchema().WithProperties(map[string]*spec.Schema{
+				"fileName": spec.NewArraySchema().WithItems(spec.NewStringSchema().WithFormat("binary")),
+			}),
 			wantErr: false,
 		},
 		{
 			name: "missing boundary param",
 			args: args{
-				operation: spec.NewOperation(""),
-				body:      formDataBody,
-				params:    map[string]string{},
+				body:   formDataBody,
+				params: map[string]string{},
 			},
-			want:    spec.NewOperation(""),
+			want:    nil,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := addMultipartFormDataParams(tt.args.operation, tt.args.body, tt.args.params)
+			got, err := getMultipartFormDataSchema(tt.args.body, tt.args.params)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("addMultipartFormDataParams() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getMultipartFormDataSchema() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != nil {
-				sort.Slice(got.Parameters, func(i, j int) bool {
-					return got.Parameters[i].Name < got.Parameters[j].Name
-				})
-			}
-			sort.Slice(tt.want.Parameters, func(i, j int) bool {
-				return tt.want.Parameters[i].Name < tt.want.Parameters[j].Name
-			})
 			if !reflect.DeepEqual(got, tt.want) {
 				gotB, _ := json.Marshal(got)
 				wantB, _ := json.Marshal(tt.want)
-				t.Errorf("addMultipartFormDataParams() got = %v, want %v", string(gotB), string(wantB))
+				t.Errorf("getMultipartFormDataSchema() got = %v, want %v", string(gotB), string(wantB))
 			}
 		})
 	}
