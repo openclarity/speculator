@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 func Test_extractQueryParams(t *testing.T) {
@@ -94,11 +94,11 @@ func Test_addQueryParam(t *testing.T) {
 		{
 			name: "sanity",
 			args: args{
-				operation: spec.NewOperation(""),
+				operation: spec.NewOperation(),
 				key:       "key",
 				values:    []string{"val1"},
 			},
-			want: spec.NewOperation("").AddParam(spec.QueryParam("key").Typed("string", "")),
+			want: createTestOperation().WithParameter(spec.NewQueryParameter("key").WithSchema(spec.NewStringSchema())).Op,
 		},
 	}
 	for _, tt := range tests {

@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"testing"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"
@@ -218,13 +218,9 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 				Port: "80",
 				ID:   uuidVar,
 				ProvidedSpec: &ProvidedSpec{
-					Spec: &oapi_spec.Swagger{
-						SwaggerProps: oapi_spec.SwaggerProps{
-							Paths: &oapi_spec.Paths{
-								Paths: map[string]oapi_spec.PathItem{
-									"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-								},
-							},
+					Doc: &oapi_spec.T{
+						Paths: map[string]*oapi_spec.PathItem{
+							"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 						},
 					},
 				},
@@ -248,13 +244,9 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 					Port: "80",
 					ID:   uuidVar,
 					ProvidedSpec: &ProvidedSpec{
-						Spec: &oapi_spec.Swagger{
-							SwaggerProps: oapi_spec.SwaggerProps{
-								Paths: &oapi_spec.Paths{
-									Paths: map[string]oapi_spec.PathItem{
-										"/api": NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-									},
-								},
+						Doc: &oapi_spec.T{
+							Paths: map[string]*oapi_spec.PathItem{
+								"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 							},
 						},
 					},
