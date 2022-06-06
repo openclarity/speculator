@@ -214,7 +214,7 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 	}
 
-	if _, err = loadAndValidateRawJSONSpec(ret); err != nil {
+	if _, err = LoadAndValidateRawJSONSpecV3(ret); err != nil {
 		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
 		return nil, fmt.Errorf("failed to validate the spec. %w", err)
 	}
@@ -240,7 +240,7 @@ func (s *Spec) SpecInfoClone() (*Spec, error) {
 	}, nil
 }
 
-func loadAndValidateRawJSONSpec(spec []byte) (*oapi_spec.T, error) {
+func LoadAndValidateRawJSONSpecV3(spec []byte) (*oapi_spec.T, error) {
 	loader := oapi_spec.NewLoader()
 
 	doc, err := loader.LoadFromData(spec)

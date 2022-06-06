@@ -38,7 +38,7 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 		return fmt.Errorf("failed to convert provided spec into json: %s. %v", providedSpec, err)
 	}
 
-	doc, err := loadAndValidateRawJSONSpec(jsonSpec)
+	doc, err := LoadAndValidateRawJSONSpecV3(jsonSpec)
 	if err != nil {
 		log.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
 		return fmt.Errorf("provided spec is not valid. %w", err)
