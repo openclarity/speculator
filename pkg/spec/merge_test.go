@@ -2022,6 +2022,11 @@ func Test_shouldReturnIfEmptyRequestBody(t *testing.T) {
 }
 
 func Test_mergeRequestBody(t *testing.T) {
+	requestBody := spec.NewRequestBody()
+	requestBody.Content = spec.NewContent()
+	requestBody.Content["application/json"] = spec.NewMediaType().WithSchema(spec.NewStringSchema())
+	requestBody.Content["application/xml"] = spec.NewMediaType().WithSchema(spec.NewStringSchema())
+
 	type args struct {
 		body  *spec.RequestBodyRef
 		body2 *spec.RequestBodyRef
@@ -2034,19 +2039,126 @@ func Test_mergeRequestBody(t *testing.T) {
 		want1 []conflict
 	}{
 		{
-			name:  "",
-			args:  args{},
+			name: "first is nil",
+			args: args{
+				body: nil,
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "second is nil",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				body2: nil,
+				path:  nil,
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "both are nil",
+			args: args{
+				body:  nil,
+				body2: nil,
+				path:  nil,
+			},
 			want:  nil,
 			want1: nil,
+		},
+		{
+			name: "non mutual contents",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithSchema(spec.NewStringSchema(), []string{"application/xml"}),
+				},
+				path: nil,
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().
+					WithSchema(spec.NewStringSchema(), []string{"application/json", "application/xml"}),
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual contents",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().
+					WithJSONSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual and non mutual contents",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithJSONSchema(spec.NewStringSchema()),
+				},
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().WithSchema(spec.NewStringSchema(), []string{"application/xml", "application/json"}),
+				},
+				path: nil,
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().
+					WithSchema(spec.NewStringSchema(), []string{"application/xml", "application/json"}),
+			},
+			want1: nil,
+		},
+		{
+			name: "non mutual contents with conflicts",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().
+						WithSchema(spec.NewStringSchema(), []string{"application/xml"}),
+				},
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().
+						WithSchema(spec.NewInt64Schema(), []string{"application/xml"}),
+				},
+				path: field.NewPath("requestBody"),
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().
+					WithSchema(spec.NewStringSchema(), []string{"application/xml"}),
+			},
+			want1: []conflict{
+				{
+					path: field.NewPath("requestBody").Child("content").Child("application/xml"),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewInt64Schema(),
+					msg: createConflictMsg(field.NewPath("requestBody").Child("content").Child("application/xml"),
+						spec.TypeString, spec.TypeInteger),
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Errorf("TODO")
 			got, got1 := mergeRequestBody(tt.args.body, tt.args.body2, tt.args.path)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("mergeRequestBody() got = %v, want %v", got, tt.want)
-			}
+			assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("mergeRequestBody() got1 = %v, want %v", got1, tt.want1)
 			}
