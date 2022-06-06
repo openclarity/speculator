@@ -16,8 +16,6 @@
 package spec
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"reflect"
 	"sort"
@@ -25,6 +23,7 @@ import (
 	"testing"
 
 	oapi_spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	uuid "github.com/satori/go.uuid"
 	"gotest.tools/assert"
 
@@ -101,7 +100,9 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					Port: port,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
+							"/api/{param1}": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -170,8 +171,11 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
-							"/api/1":        &NewTestPathItem().WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
+							"/api/{param1}": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
+							"/api/1": &NewTestPathItem().
+								WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -241,11 +245,10 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/user/{test}": &NewTestPathItem().WithOperation(http.MethodGet,
-								NewOperation(t, Data).
-									WithParameter(
-										oapi_spec.NewPathParameter("test").WithSchema(oapi_spec.NewStringSchema())).
-									Op).PathItem,
+							"/api/{test}": &NewTestPathItem().
+								WithOperation(http.MethodPost, NewOperation(t, Data).Op).
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).
+								WithPathParams("test", oapi_spec.NewStringSchema()).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -331,9 +334,15 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ID:   uuidVar,
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/{param1}":               &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
-							"/api/foo":                    &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithPathParams("param1", oapi_spec.NewStringSchema()).WithPathParams("param2", oapi_spec.NewStringSchema()).PathItem,
+							"/api/{param1}": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
+							"/api/foo": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
+							"/user/{param1}/bar/{param2}": &NewTestPathItem().
+								WithOperation(http.MethodGet, NewOperation(t, Data).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).
+								WithPathParams("param2", oapi_spec.NewInt64Schema()).PathItem,
 						},
 					},
 					LearningSpec: &LearningSpec{
@@ -423,13 +432,15 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ApprovedSpec: &ApprovedSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
 							"/api/{param1}": &NewTestPathItem().WithOperation(http.MethodGet,
-								NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{BasicAuthSecuritySchemeKey: {}}).
-									WithParameter(oapi_spec.NewPathParameter("param1").WithSchema(oapi_spec.NewStringSchema())).Op).PathItem,
+								NewOperation(t, Data).
+									WithSecurityRequirement(oapi_spec.SecurityRequirement{BasicAuthSecuritySchemeKey: {}}).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
 							"/api/foo": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 							"/user/{param1}/bar/{param2}": &NewTestPathItem().WithOperation(http.MethodGet,
-								NewOperation(t, Data).WithSecurityRequirement(oapi_spec.SecurityRequirement{OAuth2SecuritySchemeKey: {}}).
-									WithParameter(oapi_spec.NewPathParameter("param1").WithSchema(oapi_spec.NewStringSchema())).
-									WithParameter(oapi_spec.NewPathParameter("param2").WithSchema(oapi_spec.NewStringSchema())).Op).PathItem,
+								NewOperation(t, Data).
+									WithSecurityRequirement(oapi_spec.SecurityRequirement{OAuth2SecuritySchemeKey: {}}).Op).
+								WithPathParams("param1", oapi_spec.NewInt64Schema()).
+								WithPathParams("param2", oapi_spec.NewInt64Schema()).PathItem,
 						},
 						SecuritySchemes: oapi_spec.SecuritySchemes{
 							BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
@@ -447,63 +458,6 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			wantErr: false,
-		},
-		{
-			name: "spec not valid (no host and port) - validation error. spec should not be changed",
-			fields: fields{
-				ID: uuidVar,
-				ApprovedSpec: &ApprovedSpec{
-					PathItems: map[string]*oapi_spec.PathItem{},
-				},
-				LearningSpec: &LearningSpec{
-					PathItems: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/api/2": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-					},
-				},
-			},
-			args: args{
-				approvedReviews: &ApprovedSpecReview{
-					PathToPathItem: map[string]*oapi_spec.PathItem{
-						"/api/1": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-						"/api/2": &NewTestPathItem().
-							WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-					},
-					PathItemsReview: []*ApprovedSpecReviewPathItem{
-						{
-							ReviewPathItem: ReviewPathItem{
-								ParameterizedPath: "/api/{param1}",
-								Paths: map[string]bool{
-									"/api/1": true,
-									"/api/2": true,
-								},
-							},
-							PathUUID: "1",
-						},
-					},
-				},
-			},
-			wantSpec: &Spec{
-				SpecInfo: SpecInfo{
-					ID: uuidVar,
-					ApprovedSpec: &ApprovedSpec{
-						PathItems: map[string]*oapi_spec.PathItem{},
-					},
-					LearningSpec: &LearningSpec{
-						PathItems: map[string]*oapi_spec.PathItem{
-							"/api/1": &NewTestPathItem().
-								WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
-							"/api/2": &NewTestPathItem().
-								WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
-						},
-					},
-					ApprovedPathTrie: pathtrie.New(),
-				},
-			},
-			wantErr: true,
 		},
 	}
 
@@ -525,14 +479,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				return
 			}
 
-			specB, err := json.Marshal(s)
-			assert.NilError(t, err)
-			wantB, err := json.Marshal(tt.wantSpec)
-			assert.NilError(t, err)
-
-			if !bytes.Equal(specB, wantB) {
-				t.Errorf("ApplyApprovedReview() = %v, want %v", string(specB), string(wantB))
-			}
+			assert.DeepEqual(t, s, tt.wantSpec, cmpopts.IgnoreUnexported(oapi_spec.Schema{}, Spec{}), cmpopts.IgnoreTypes(oapi_spec.ExtensionProps{}))
 		})
 	}
 }
@@ -732,7 +679,7 @@ func Test_addPathParamsToPathItem(t *testing.T) {
 					"api/2/foo": true,
 				},
 			},
-			wantPathItem: &NewTestPathItem().WithPathParams("param1", oapi_spec.NewStringSchema()).PathItem,
+			wantPathItem: &NewTestPathItem().WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
 		},
 		{
 			name: "2 params",
@@ -744,7 +691,9 @@ func Test_addPathParamsToPathItem(t *testing.T) {
 					"api/2/foo/345": true,
 				},
 			},
-			wantPathItem: &NewTestPathItem().WithPathParams("param1", oapi_spec.NewStringSchema()).WithPathParams("param2", oapi_spec.NewStringSchema()).PathItem,
+			wantPathItem: &NewTestPathItem().
+				WithPathParams("param1", oapi_spec.NewInt64Schema()).
+				WithPathParams("param2", oapi_spec.NewInt64Schema()).PathItem,
 		},
 	}
 	for _, tt := range tests {

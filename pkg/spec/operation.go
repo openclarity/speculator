@@ -272,7 +272,9 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 		}
 	}
 
-	response := spec.NewResponse()
+	// https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#responseObject
+	// REQUIRED. A short description of the response.
+	response := spec.NewResponse().WithDescription("response")
 	if len(data.RespBody) > 0 {
 		respContentType := data.getRespContentType()
 		if respContentType == "" {

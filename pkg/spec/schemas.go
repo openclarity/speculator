@@ -42,6 +42,7 @@ func updateSchemas(schemas spec.Schemas, op *spec.Operation) (retSchemas spec.Sc
 			continue
 		}
 		for content, mediaType := range response.Value.Content {
+			
 			schemas, mediaType.Schema = schemaToRef(schemas, mediaType.Schema.Value, "", 0)
 			op.Responses[i].Value.Content[content] = mediaType
 		}
@@ -69,7 +70,7 @@ func updateSchemas(schemas spec.Schemas, op *spec.Operation) (retSchemas spec.Sc
 
 func schemaToRef(schemas spec.Schemas, schema *spec.Schema, schemeNameHint string, depth int) (retSchemes spec.Schemas, schemaRef *spec.SchemaRef) {
 	if schema == nil {
-		return schemas, spec.NewSchemaRef("", schema)
+		return schemas, nil
 	}
 
 	if depth >= maxSchemaToRefDepth {
@@ -78,12 +79,12 @@ func schemaToRef(schemas spec.Schemas, schema *spec.Schema, schemeNameHint strin
 	}
 
 	if schema.Type == spec.TypeArray {
-		if schema.Items == nil || schema.Items.Value == nil {
+		if schema.Items == nil {
 			// no need to create definition for an empty array
 			return schemas, spec.NewSchemaRef("", schema)
 		}
 		// remove plural from def name hint when it's an array type (if exist)
-		schemas, schema.Items.Value.Items = schemaToRef(schemas, schema.Items.Value.Items.Value, strings.TrimSuffix(schemeNameHint, "s"), depth+1)
+		schemas, schema.Items = schemaToRef(schemas, schema.Items.Value, strings.TrimSuffix(schemeNameHint, "s"), depth+1)
 		return schemas, spec.NewSchemaRef("", schema)
 	}
 
@@ -91,8 +92,8 @@ func schemaToRef(schemas spec.Schemas, schema *spec.Schema, schemeNameHint strin
 		return schemas, spec.NewSchemaRef("", schema)
 	}
 
-	if schema.Properties == nil {
-		// no need to create definition for an empty object
+	if schema.Properties == nil || len(schema.Properties) == 0 {
+		// no need to create ref for an empty object
 		return schemas, spec.NewSchemaRef("", schema)
 	}
 
@@ -101,8 +102,10 @@ func schemaToRef(schemas spec.Schemas, schema *spec.Schema, schemeNameHint strin
 	for propName := range schema.Properties {
 		var ref *spec.SchemaRef
 		schemas, ref = schemaToRef(schemas, schema.Properties[propName].Value, propName, depth+1)
-		schema.Properties[propName] = ref
-		propNames = append(propNames, propName)
+		if ref != nil {
+			schema.Properties[propName] = ref
+			propNames = append(propNames, propName)
+		}
 	}
 
 	// look for schema in schemas with identical schema

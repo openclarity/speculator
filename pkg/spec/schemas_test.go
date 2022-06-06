@@ -17,7 +17,8 @@ package spec
 
 import (
 	"encoding/json"
-	"reflect"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 	"testing"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
@@ -205,7 +206,8 @@ func createArraySchemaWithRefItems(name string) *spec.Schema {
 }
 
 func Test_schemaToRef(t *testing.T) {
-
+	arraySchemaWithNilItems := spec.NewArraySchema()
+	arraySchemaWithNilItems.Items = nil
 	type args struct {
 		schemas     spec.Schemas
 		schema      *spec.Schema
@@ -238,16 +240,16 @@ func Test_schemaToRef(t *testing.T) {
 				schemas: spec.Schemas{
 					"test": &spec.SchemaRef{Value: spec.NewBoolSchema()},
 				},
-				schema:      spec.NewArraySchema().WithItems(nil),
+				schema:      spec.NewArraySchema(),
 				defNameHint: "",
 			},
 			wantRetSchemas: spec.Schemas{
 				"test": &spec.SchemaRef{Value: spec.NewBoolSchema()},
 			},
-			wantRetSchema: spec.NewSchemaRef("", spec.NewArraySchema().WithItems(nil)),
+			wantRetSchema: spec.NewSchemaRef("", spec.NewArraySchema()),
 		},
 		{
-			name: "array schema with non object items - no change for definitions",
+			name: "array schema with non object items - no change for schemas",
 			args: args{
 				schemas: spec.Schemas{
 					"test": &spec.SchemaRef{Value: spec.NewBoolSchema()},
@@ -288,7 +290,7 @@ func Test_schemaToRef(t *testing.T) {
 				"hint":   &spec.SchemaRef{Value: spec.NewBoolSchema()},
 				"hint_0": &spec.SchemaRef{Value: stringNumberObject},
 			},
-			wantRetSchema: spec.NewSchemaRef("", createArraySchemaWithRefItems("hint")),
+			wantRetSchema: spec.NewSchemaRef("", createArraySchemaWithRefItems("hint_0")),
 		},
 		{
 			name: "primitive type",
@@ -304,7 +306,7 @@ func Test_schemaToRef(t *testing.T) {
 			wantRetSchema: spec.NewSchemaRef("", spec.NewInt64Schema()),
 		},
 		{
-			name: "empty object - no new definition",
+			name: "empty object - no new schemas",
 			args: args{
 				schemas: spec.Schemas{
 					"test": &spec.SchemaRef{Value: stringNumberObject},
@@ -398,7 +400,7 @@ func Test_schemaToRef(t *testing.T) {
 				"boolean_objects": spec.NewSchemaRef("", createObjectSchemaWithRef(
 					map[string]*spec.SchemaRef{
 						spec.TypeBoolean: spec.NewSchemaRef("", spec.NewBoolSchema()),
-						"objects":        spec.NewSchemaRef("", createArraySchemaWithRefItems(schemasRefPrefix+"object")),
+						"objects":        spec.NewSchemaRef("", createArraySchemaWithRefItems("object")),
 					},
 				)),
 			},
@@ -422,7 +424,11 @@ func Test_schemaToRef(t *testing.T) {
 			wantRetSchemas: spec.Schemas{
 				"obj1": spec.NewSchemaRef("", createObjectSchema(
 					map[string]*spec.Schema{
-						"obj2": stringNumberObject,
+						"obj1": createObjectSchema(
+							map[string]*spec.Schema{
+								"obj2": stringNumberObject,
+							},
+						),
 					},
 				),
 				),
@@ -477,7 +483,7 @@ func Test_schemaToRef(t *testing.T) {
 				depth: maxSchemaToRefDepth,
 			},
 			wantRetSchemas: nil,
-			wantRetSchema: spec.NewSchemaRef(schemasRefPrefix+"obj1_0", createObjectSchema(
+			wantRetSchema: spec.NewSchemaRef("", createObjectSchema(
 				map[string]*spec.Schema{
 					spec.TypeBoolean: spec.NewBoolSchema(),
 
@@ -489,13 +495,9 @@ func Test_schemaToRef(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRetDefinitions, gotRetSchema := schemaToRef(tt.args.schemas, tt.args.schema, tt.args.defNameHint, tt.args.depth)
-			if !reflect.DeepEqual(gotRetDefinitions, tt.wantRetSchemas) {
-				t.Errorf("schemaToRef() gotRetDefinitions = %v, want %v", marshal(gotRetDefinitions), marshal(tt.wantRetSchemas))
-			}
-			if !reflect.DeepEqual(gotRetSchema, tt.wantRetSchema) {
-				t.Errorf("schemaToRef() gotRetSchema = %v, want %v", marshal(gotRetSchema), marshal(tt.wantRetSchema))
-			}
+			gotRetSchemas, gotRetSchema := schemaToRef(tt.args.schemas, tt.args.schema, tt.args.defNameHint, tt.args.depth)
+			assert.DeepEqual(t, gotRetSchemas, tt.wantRetSchemas, cmpopts.IgnoreUnexported(spec.Schema{}))
+			assert.DeepEqual(t, gotRetSchema, tt.wantRetSchema, cmpopts.IgnoreUnexported(spec.Schema{}))
 		})
 	}
 }
@@ -529,16 +531,18 @@ func createArraySchemaWithRef(ref string) *spec.Schema {
 func Test_updateSchemas(t *testing.T) {
 	op := NewOperation(t, interaction).Op
 	retOp := NewOperation(t, interaction).Op
-	retOp.Parameters[0] = &spec.ParameterRef{
+	retOp.RequestBody = &spec.RequestBodyRef{Value: spec.NewRequestBody().WithJSONSchemaRef(&spec.SchemaRef{
 		Ref: schemasRefPrefix + "active_certificateVersion_controllerInstanceInfo_policyAndAppVersion_version",
-	}
+	})}
 	retOp.Responses["200"] = &spec.ResponseRef{
-		Ref: schemasRefPrefix + "cvss",
+		Value: spec.NewResponse().WithDescription("response").WithJSONSchemaRef(&spec.SchemaRef{
+			Ref: schemasRefPrefix + "cvss",
+		}),
 	}
 
 	type args struct {
-		definitions spec.Schemas
-		op          *spec.Operation
+		schemas spec.Schemas
+		op      *spec.Operation
 	}
 	tests := []struct {
 		name             string
@@ -549,8 +553,8 @@ func Test_updateSchemas(t *testing.T) {
 		{
 			name: "sanity",
 			args: args{
-				definitions: nil,
-				op:          op,
+				schemas: nil,
+				op:      op,
 			},
 			wantRetSchemas: spec.Schemas{
 				"controllerInstanceInfo": spec.NewSchemaRef("", createObjectSchema(
@@ -584,13 +588,9 @@ func Test_updateSchemas(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRetDefinitions, gotRetOperation := updateSchemas(tt.args.definitions, tt.args.op)
-			if !reflect.DeepEqual(gotRetDefinitions, tt.wantRetSchemas) {
-				t.Errorf("updateSchemas() gotRetDefinitions = %v, want %v", marshal(gotRetDefinitions), marshal(tt.wantRetSchemas))
-			}
-			if !reflect.DeepEqual(gotRetOperation, tt.wantRetOperation) {
-				t.Errorf("updateSchemas() gotRetOperation = %v, want %v", marshal(gotRetOperation), marshal(tt.wantRetOperation))
-			}
+			gotRetSchemas, gotRetOperation := updateSchemas(tt.args.schemas, tt.args.op)
+			assert.DeepEqual(t, gotRetSchemas, tt.wantRetSchemas, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
+			assert.DeepEqual(t, gotRetOperation, tt.wantRetOperation, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 		})
 	}
 }

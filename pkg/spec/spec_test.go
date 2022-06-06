@@ -219,6 +219,7 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 				ID:   uuidVar,
 				ProvidedSpec: &ProvidedSpec{
 					Doc: &oapi_spec.T{
+						Info: createDefaultSwaggerInfo(),
 						Paths: map[string]*oapi_spec.PathItem{
 							"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 						},
@@ -245,6 +246,7 @@ func TestSpec_SpecInfoClone(t *testing.T) {
 					ID:   uuidVar,
 					ProvidedSpec: &ProvidedSpec{
 						Doc: &oapi_spec.T{
+							Info: createDefaultSwaggerInfo(),
 							Paths: map[string]*oapi_spec.PathItem{
 								"/api": &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 							},

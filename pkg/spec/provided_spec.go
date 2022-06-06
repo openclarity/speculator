@@ -17,7 +17,7 @@ package spec
 
 import (
 	"fmt"
-	"net/url"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/ghodss/yaml"
@@ -69,11 +69,25 @@ func (p *ProvidedSpec) GetBasePath() string {
 		if server.URL == "" || server.URL == "/" {
 			continue
 		}
-		if u, err := url.Parse(server.URL); err != nil {
-			log.Errorf("failed to parse server url %q: %v", server.URL, err)
-		} else {
-			return u.EscapedPath()
+
+		// strip scheme if exits
+		urlNoScheme := server.URL
+		schemeSplittedUrl := strings.Split(server.URL, "://")
+		if len(schemeSplittedUrl) > 1 {
+			urlNoScheme = schemeSplittedUrl[1]
 		}
+
+		// get path
+		var path string
+		splittedUrlNoScheme := strings.SplitN(urlNoScheme, "/", 2)
+		if len(splittedUrlNoScheme) > 1 {
+			path = splittedUrlNoScheme[1]
+		}
+		if path == "" {
+			continue
+		}
+
+		return "/" + path
 	}
 
 	return ""
