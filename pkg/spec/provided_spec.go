@@ -16,6 +16,7 @@
 package spec
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -40,8 +41,12 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 
 	doc, err := LoadAndValidateRawJSONSpecV3(jsonSpec)
 	if err != nil {
-		log.Errorf("provided spec is not valid: %s. %v", jsonSpec, err)
-		return fmt.Errorf("provided spec is not valid. %w", err)
+		log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
+		doc, err = LoadAndValidateRawJSONSpecV3FromV2(jsonSpec)
+		if err = json.Unmarshal(jsonSpec, &doc); err != nil {
+			log.Errorf("provided spec is not valid OpenAPI 2.0: %s. %v", jsonSpec, err)
+			return fmt.Errorf("provided spec is not valid. %w", err)
+		}
 	}
 
 	if s.ProvidedSpec == nil {

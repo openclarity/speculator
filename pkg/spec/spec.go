@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi2conv"
 	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	"github.com/ghodss/yaml"
 	uuid "github.com/satori/go.uuid"
@@ -195,7 +197,7 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 	clonedApprovedSpec.PathItems, schemas = reconstructObjectRefs(clonedApprovedSpec.PathItems)
 
 	generatedSpec := &oapi_spec.T{
-		OpenAPI: "3.0.0",
+		OpenAPI: "3.0.3",
 		Components: oapi_spec.Components{
 			Schemas: schemas,
 		},
@@ -254,6 +256,25 @@ func LoadAndValidateRawJSONSpecV3(spec []byte) (*oapi_spec.T, error) {
 	}
 
 	return doc, nil
+}
+
+func LoadAndValidateRawJSONSpecV3FromV2(spec []byte) (*oapi_spec.T, error) {
+	var doc openapi2.T
+	if err := json.Unmarshal(spec, &doc); err != nil {
+		return nil, fmt.Errorf("provided spec is not valid. %w", err)
+	}
+
+	v3, err := openapi2conv.ToV3(&doc)
+	if err != nil {
+		return nil, fmt.Errorf("conversion to V3 failed. %w", err)
+	}
+
+	err = v3.Validate(oapi_spec.NewLoader().Context)
+	if err != nil {
+		return nil, fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
+	}
+
+	return v3, nil
 }
 
 func reconstructObjectRefs(pathItems map[string]*oapi_spec.PathItem) (retPathItems map[string]*oapi_spec.PathItem, schemas oapi_spec.Schemas) {
