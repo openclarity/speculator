@@ -348,6 +348,8 @@ func mergeResponse(response, response2 *spec.Response, path *field.Path) (*spec.
 	retResponse := spec.NewResponse()
 	if response.Description != nil {
 		retResponse.WithDescription(*response.Description)
+	} else if response2.Description != nil {
+		retResponse.WithDescription(*response2.Description)
 	}
 
 	content, conflicts := mergeContent(response.Content, response2.Content, path.Child("content"))

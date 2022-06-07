@@ -308,6 +308,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 	}
 
 	operation.AddResponse(data.statusCode, response)
+	operation.AddResponse(0 /*"default"*/, spec.NewResponse().WithDescription("default"))
 
 	return operation, nil
 }
