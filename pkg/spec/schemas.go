@@ -42,7 +42,7 @@ func updateSchemas(schemas spec.Schemas, op *spec.Operation) (retSchemas spec.Sc
 			continue
 		}
 		for content, mediaType := range response.Value.Content {
-			
+
 			schemas, mediaType.Schema = schemaToRef(schemas, mediaType.Schema.Value, "", 0)
 			op.Responses[i].Value.Content[content] = mediaType
 		}
@@ -58,7 +58,7 @@ func updateSchemas(schemas spec.Schemas, op *spec.Operation) (retSchemas spec.Sc
 		}
 	}
 
-	if op.RequestBody.Value != nil {
+	if op.RequestBody != nil && op.RequestBody.Value != nil {
 		for content, mediaType := range op.RequestBody.Value.Content {
 			schemas, mediaType.Schema = schemaToRef(schemas, mediaType.Schema.Value, "", 0)
 			op.RequestBody.Value.Content[content] = mediaType
