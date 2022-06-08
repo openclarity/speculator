@@ -475,11 +475,15 @@ func TestCloneOperation(t *testing.T) {
 			args: args{
 				op: createTestOperation().
 					WithParameter(spec.NewHeaderParameter("header")).
-					WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
+					WithResponse(200, spec.NewResponse().WithDescription("keep").
+						WithJSONSchemaRef(spec.NewSchemaRef("",
+							spec.NewObjectSchema().WithProperty("test", spec.NewStringSchema())))).Op,
 			},
 			want: createTestOperation().
 				WithParameter(spec.NewHeaderParameter("header")).
-				WithResponse(200, spec.NewResponse().WithDescription("keep")).Op,
+				WithResponse(200, spec.NewResponse().WithDescription("keep").
+					WithJSONSchemaRef(spec.NewSchemaRef("",
+						spec.NewObjectSchema().WithProperty("test", spec.NewStringSchema())))).Op,
 			wantErr: false,
 		},
 	}
