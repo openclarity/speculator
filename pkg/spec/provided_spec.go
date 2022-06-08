@@ -309,6 +309,7 @@ func clearRefFromParameter(parameter *openapi3.Parameter) *openapi3.Parameter {
 	}
 
 	parameter.Schema = clearRefFromSchemaRef(parameter.Schema)
+	parameter.Content = clearRefFromContent(parameter.Content)
 	return parameter
 }
 

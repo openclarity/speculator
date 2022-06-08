@@ -874,3 +874,966 @@ func Test_clearRefFromRequestBodyRef(t *testing.T) {
 		})
 	}
 }
+
+func Test_clearRefFromResponseRef(t *testing.T) {
+	type args struct {
+		responseRef *openapi3.ResponseRef
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.ResponseRef
+	}{
+		{
+			name: "nil ResponseRef",
+			args: args{
+				responseRef: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty ResponseRef",
+			args: args{
+				responseRef: &openapi3.ResponseRef{},
+			},
+			want: &openapi3.ResponseRef{},
+		},
+		{
+			name: "sanity ResponseRef",
+			args: args{
+				responseRef: &openapi3.ResponseRef{
+					Ref: "ref-response",
+					Value: openapi3.NewResponse().
+						WithJSONSchemaRef(openapi3.NewSchemaRef("ref-string",
+							openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+				},
+			},
+			want: &openapi3.ResponseRef{
+				Ref: "",
+				Value: openapi3.NewResponse().
+					WithJSONSchemaRef(openapi3.NewSchemaRef("",
+						openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromResponseRef(tt.args.responseRef), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromResponse(t *testing.T) {
+	type args struct {
+		response *openapi3.Response
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.Response
+	}{
+		{
+			name: "nil response",
+			args: args{
+				response: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty response",
+			args: args{
+				response: openapi3.NewResponse(),
+			},
+			want: openapi3.NewResponse(),
+		},
+		{
+			name: "multiple headers",
+			args: args{
+				response: &openapi3.Response{
+					Headers: openapi3.Headers{
+						"header1": &openapi3.HeaderRef{
+							Ref: "header1-ref",
+							Value: &openapi3.Header{
+								Parameter: *openapi3.NewHeaderParameter("test1").
+									WithSchema(&openapi3.Schema{
+										Properties: openapi3.Schemas{
+											"prop1": openapi3.NewSchemaRef("prop1-ref", openapi3.NewStringSchema()),
+										},
+									}),
+							},
+						},
+						"header2": &openapi3.HeaderRef{
+							Ref: "header2-ref",
+							Value: &openapi3.Header{
+								Parameter: *openapi3.NewHeaderParameter("test2").
+									WithSchema(&openapi3.Schema{
+										Properties: openapi3.Schemas{
+											"prop2": openapi3.NewSchemaRef("prop2-ref", openapi3.NewStringSchema()),
+										},
+									}),
+							},
+						},
+					},
+				},
+			},
+			want: &openapi3.Response{
+				Headers: openapi3.Headers{
+					"header1": &openapi3.HeaderRef{
+						Ref: "",
+						Value: &openapi3.Header{
+							Parameter: *openapi3.NewHeaderParameter("test1").
+								WithSchema(&openapi3.Schema{
+									Properties: openapi3.Schemas{
+										"prop1": openapi3.NewSchemaRef("", openapi3.NewStringSchema()),
+									},
+								}),
+						},
+					},
+					"header2": &openapi3.HeaderRef{
+						Ref: "",
+						Value: &openapi3.Header{
+							Parameter: *openapi3.NewHeaderParameter("test2").
+								WithSchema(&openapi3.Schema{
+									Properties: openapi3.Schemas{
+										"prop2": openapi3.NewSchemaRef("", openapi3.NewStringSchema()),
+									},
+								}),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple contents",
+			args: args{
+				response: &openapi3.Response{
+					Content: openapi3.Content{
+						"content1": openapi3.NewMediaType().
+							WithSchemaRef(openapi3.NewSchemaRef("ref1-string",
+								openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+						"content2": openapi3.NewMediaType().
+							WithSchemaRef(openapi3.NewSchemaRef("ref2-int",
+								openapi3.NewObjectSchema().WithItems(openapi3.NewInt64Schema()))),
+					},
+				},
+			},
+			want: &openapi3.Response{
+				Content: openapi3.Content{
+					"content1": openapi3.NewMediaType().
+						WithSchemaRef(openapi3.NewSchemaRef("",
+							openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+					"content2": openapi3.NewMediaType().
+						WithSchemaRef(openapi3.NewSchemaRef("",
+							openapi3.NewObjectSchema().WithItems(openapi3.NewInt64Schema()))),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromResponse(tt.args.response), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromMediaType(t *testing.T) {
+	type args struct {
+		mediaType *openapi3.MediaType
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.MediaType
+	}{
+		{
+			name: "nil mediaType",
+			args: args{
+				mediaType: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty mediaType",
+			args: args{
+				mediaType: openapi3.NewMediaType(),
+			},
+			want: openapi3.NewMediaType(),
+		},
+		{
+			name: "sanity mediaType",
+			args: args{
+				mediaType: openapi3.NewMediaType().
+					WithSchemaRef(openapi3.NewSchemaRef("ref",
+						openapi3.NewArraySchema().WithItems(openapi3.NewUUIDSchema()))),
+			},
+			want: openapi3.NewMediaType().
+				WithSchemaRef(openapi3.NewSchemaRef("",
+					openapi3.NewArraySchema().WithItems(openapi3.NewUUIDSchema()))),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromMediaType(tt.args.mediaType), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromHeaderRef(t *testing.T) {
+	type args struct {
+		headerRef *openapi3.HeaderRef
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.HeaderRef
+	}{
+		{
+			name: "nil headerRef",
+			args: args{
+				headerRef: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty headerRef",
+			args: args{
+				headerRef: &openapi3.HeaderRef{},
+			},
+			want: &openapi3.HeaderRef{},
+		},
+		{
+			name: "sanity headerRef",
+			args: args{
+				headerRef: &openapi3.HeaderRef{
+					Ref: "header-ref",
+					Value: &openapi3.Header{
+						Parameter: *openapi3.NewHeaderParameter("test").
+							WithSchema(&openapi3.Schema{
+								Properties: openapi3.Schemas{
+									"prop": openapi3.NewSchemaRef("prop-ref", openapi3.NewStringSchema()),
+								},
+							}),
+					},
+				},
+			},
+			want: &openapi3.HeaderRef{
+				Ref: "",
+				Value: &openapi3.Header{
+					Parameter: *openapi3.NewHeaderParameter("test").
+						WithSchema(&openapi3.Schema{
+							Properties: openapi3.Schemas{
+								"prop": openapi3.NewSchemaRef("", openapi3.NewStringSchema()),
+							},
+						}),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromHeaderRef(tt.args.headerRef), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromHeader(t *testing.T) {
+	type args struct {
+		header *openapi3.Header
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.Header
+	}{
+		{
+			name: "nil header",
+			args: args{
+				header: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty header",
+			args: args{
+				header: &openapi3.Header{},
+			},
+			want: &openapi3.Header{},
+		},
+		{
+			name: "empty header param",
+			args: args{
+				header: &openapi3.Header{
+					Parameter: openapi3.Parameter{},
+				},
+			},
+			want: &openapi3.Header{
+				Parameter: openapi3.Parameter{},
+			},
+		},
+		{
+			name: "sanity header",
+			args: args{
+				header: &openapi3.Header{
+					Parameter: *openapi3.NewHeaderParameter("test").
+						WithSchema(&openapi3.Schema{
+							Properties: openapi3.Schemas{
+								"prop": openapi3.NewSchemaRef("prop-ref", openapi3.NewStringSchema()),
+							},
+						}),
+				},
+			},
+			want: &openapi3.Header{
+				Parameter: *openapi3.NewHeaderParameter("test").
+					WithSchema(&openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"prop": openapi3.NewSchemaRef("", openapi3.NewStringSchema()),
+						},
+					}),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromHeader(tt.args.header), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromParameterRef(t *testing.T) {
+	type args struct {
+		parameterRef *openapi3.ParameterRef
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.ParameterRef
+	}{
+		{
+			name: "nil parameterRef",
+			args: args{
+				parameterRef: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty parameterRef",
+			args: args{
+				parameterRef: &openapi3.ParameterRef{},
+			},
+			want: &openapi3.ParameterRef{},
+		},
+		{
+			name: "sanity parameterRef with Schema",
+			args: args{
+				parameterRef: &openapi3.ParameterRef{
+					Ref: "param-ref",
+					Value: openapi3.NewHeaderParameter("test").
+						WithSchema(&openapi3.Schema{
+							Properties: openapi3.Schemas{
+								"prop": openapi3.NewSchemaRef("prop-ref", openapi3.NewStringSchema()),
+							},
+						}),
+				},
+			},
+			want: &openapi3.ParameterRef{
+				Ref: "",
+				Value: openapi3.NewHeaderParameter("test").
+					WithSchema(&openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"prop": openapi3.NewSchemaRef("", openapi3.NewStringSchema()),
+						},
+					}),
+			},
+		},
+		{
+			name: "sanity parameterRef with multiple contents",
+			args: args{
+				parameterRef: &openapi3.ParameterRef{
+					Ref: "param-ref",
+					Value: &openapi3.Parameter{
+						Content: openapi3.Content{
+							"content1": openapi3.NewMediaType().
+								WithSchemaRef(openapi3.NewSchemaRef("ref-string",
+									openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+							"content2": openapi3.NewMediaType().
+								WithSchemaRef(openapi3.NewSchemaRef("ref2-int",
+									openapi3.NewObjectSchema().WithItems(openapi3.NewInt64Schema()))),
+						},
+					},
+				},
+			},
+			want: &openapi3.ParameterRef{
+				Ref: "",
+				Value: &openapi3.Parameter{
+					Content: openapi3.Content{
+						"content1": openapi3.NewMediaType().
+							WithSchemaRef(openapi3.NewSchemaRef("",
+								openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
+						"content2": openapi3.NewMediaType().
+							WithSchemaRef(openapi3.NewSchemaRef("",
+								openapi3.NewObjectSchema().WithItems(openapi3.NewInt64Schema()))),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromParameterRef(tt.args.parameterRef), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromSchemaRef(t *testing.T) {
+	type args struct {
+		schemaRef *openapi3.SchemaRef
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.SchemaRef
+	}{
+		{
+			name: "nil schemaRef",
+			args: args{
+				schemaRef: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty schemaRef",
+			args: args{
+				schemaRef: &openapi3.SchemaRef{},
+			},
+			want: &openapi3.SchemaRef{},
+		},
+		{
+			name: "sanity schemaRef",
+			args: args{
+				schemaRef: &openapi3.SchemaRef{
+					Ref: "param-ref",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "prop-ref",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "prop2-ref",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+			},
+			want: &openapi3.SchemaRef{
+				Ref: "",
+				Value: openapi3.NewObjectSchema().
+					WithPropertyRef("prop", &openapi3.SchemaRef{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop2", &openapi3.SchemaRef{
+								Ref:   "",
+								Value: openapi3.NewStringSchema(),
+							}),
+					}),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromSchemaRef(tt.args.schemaRef), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromSchema(t *testing.T) {
+	type args struct {
+		schema *openapi3.Schema
+	}
+	tests := []struct {
+		name string
+		args args
+		want *openapi3.Schema
+	}{
+		{
+			name: "nil schema",
+			args: args{
+				schema: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty schema",
+			args: args{
+				schema: &openapi3.Schema{},
+			},
+			want: &openapi3.Schema{},
+		},
+		{
+			name: "schema oneof",
+			args: args{
+				schema: &openapi3.Schema{
+					OneOf: openapi3.SchemaRefs{
+						{
+							Ref: "ref1",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewArraySchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+						{
+							Ref: "ref2",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewObjectSchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				OneOf: openapi3.SchemaRefs{
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewObjectSchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+		},
+		{
+			name: "schema AnyOf",
+			args: args{
+				schema: &openapi3.Schema{
+					AnyOf: openapi3.SchemaRefs{
+						{
+							Ref: "ref1",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewArraySchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+						{
+							Ref: "ref2",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewObjectSchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				AnyOf: openapi3.SchemaRefs{
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewObjectSchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+		},
+		{
+			name: "schema AllOf",
+			args: args{
+				schema: &openapi3.Schema{
+					AllOf: openapi3.SchemaRefs{
+						{
+							Ref: "ref1",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewArraySchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+						{
+							Ref: "ref2",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop", &openapi3.SchemaRef{
+									Ref: "prop-ref",
+									Value: openapi3.NewObjectSchema().
+										WithPropertyRef("prop2", &openapi3.SchemaRef{
+											Ref:   "prop2-ref",
+											Value: openapi3.NewStringSchema(),
+										}),
+								}),
+						},
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				AllOf: openapi3.SchemaRefs{
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+					{
+						Ref: "",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "",
+								Value: openapi3.NewObjectSchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+		},
+		{
+			name: "schema Not",
+			args: args{
+				schema: &openapi3.Schema{
+					Not: &openapi3.SchemaRef{
+						Ref: "ref1",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "prop-ref",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "prop2-ref",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				Not: &openapi3.SchemaRef{
+					Ref: "",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "",
+							Value: openapi3.NewArraySchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+			},
+		},
+		{
+			name: "schema Items",
+			args: args{
+				schema: &openapi3.Schema{
+					Items: &openapi3.SchemaRef{
+						Ref: "ref1",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "prop-ref",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "prop2-ref",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				Items: &openapi3.SchemaRef{
+					Ref: "",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "",
+							Value: openapi3.NewArraySchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+			},
+		},
+		{
+			name: "schema Properties",
+			args: args{
+				schema: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						"prop": openapi3.NewSchemaRef("ref", openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref:   "prop-ref",
+								Value: openapi3.NewStringSchema(),
+							})),
+						"prop2": openapi3.NewSchemaRef("ref2", openapi3.NewArraySchema().
+							WithPropertyRef("prop2", &openapi3.SchemaRef{
+								Ref:   "prop2-ref",
+								Value: openapi3.NewStringSchema(),
+							})),
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				Properties: openapi3.Schemas{
+					"prop": openapi3.NewSchemaRef("", openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref:   "",
+							Value: openapi3.NewStringSchema(),
+						})),
+					"prop2": openapi3.NewSchemaRef("", openapi3.NewArraySchema().
+						WithPropertyRef("prop2", &openapi3.SchemaRef{
+							Ref:   "",
+							Value: openapi3.NewStringSchema(),
+						})),
+				},
+			},
+		},
+		{
+			name: "schema AdditionalProperties",
+			args: args{
+				schema: &openapi3.Schema{
+					AdditionalProperties: &openapi3.SchemaRef{
+						Ref: "ref1",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "prop-ref",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "prop2-ref",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+			want: &openapi3.Schema{
+				AdditionalProperties: &openapi3.SchemaRef{
+					Ref: "",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "",
+							Value: openapi3.NewArraySchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromSchema(tt.args.schema), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromSchemas(t *testing.T) {
+	type args struct {
+		schemas openapi3.Schemas
+	}
+	tests := []struct {
+		name string
+		args args
+		want openapi3.Schemas
+	}{
+		{
+			name: "nil schemas",
+			args: args{
+				schemas: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty schemas",
+			args: args{
+				schemas: openapi3.Schemas{},
+			},
+			want: openapi3.Schemas{},
+		},
+		{
+			name: "sanity schemas",
+			args: args{
+				schemas: openapi3.Schemas{
+					"prop": openapi3.NewSchemaRef("ref1", openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref:   "prop-ref",
+							Value: openapi3.NewStringSchema(),
+						})),
+					"prop2": openapi3.NewSchemaRef("ref2", openapi3.NewArraySchema().
+						WithPropertyRef("prop2", &openapi3.SchemaRef{
+							Ref:   "prop2-ref",
+							Value: openapi3.NewStringSchema(),
+						})),
+				},
+			},
+			want: openapi3.Schemas{
+				"prop": openapi3.NewSchemaRef("", openapi3.NewObjectSchema().
+					WithPropertyRef("prop", &openapi3.SchemaRef{
+						Ref:   "",
+						Value: openapi3.NewStringSchema(),
+					})),
+				"prop2": openapi3.NewSchemaRef("", openapi3.NewArraySchema().
+					WithPropertyRef("prop2", &openapi3.SchemaRef{
+						Ref:   "",
+						Value: openapi3.NewStringSchema(),
+					})),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromSchemas(tt.args.schemas), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
+
+func Test_clearRefFromSchemaRefs(t *testing.T) {
+	type args struct {
+		schemaRefs openapi3.SchemaRefs
+	}
+	tests := []struct {
+		name string
+		args args
+		want openapi3.SchemaRefs
+	}{
+		{
+			name: "nil schemaRefs",
+			args: args{
+				schemaRefs: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty schemaRefs",
+			args: args{
+				schemaRefs: openapi3.SchemaRefs{},
+			},
+			want: openapi3.SchemaRefs{},
+		},
+		{
+			name: "sanity schemaRefs",
+			args: args{
+				schemaRefs: openapi3.SchemaRefs{
+					{
+						Ref: "ref1",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "prop-ref",
+								Value: openapi3.NewArraySchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "prop2-ref",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+					{
+						Ref: "ref2",
+						Value: openapi3.NewObjectSchema().
+							WithPropertyRef("prop", &openapi3.SchemaRef{
+								Ref: "prop-ref2",
+								Value: openapi3.NewObjectSchema().
+									WithPropertyRef("prop2", &openapi3.SchemaRef{
+										Ref:   "prop2-ref2",
+										Value: openapi3.NewStringSchema(),
+									}),
+							}),
+					},
+				},
+			},
+			want: openapi3.SchemaRefs{
+				{
+					Ref: "",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "",
+							Value: openapi3.NewArraySchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+				{
+					Ref: "",
+					Value: openapi3.NewObjectSchema().
+						WithPropertyRef("prop", &openapi3.SchemaRef{
+							Ref: "",
+							Value: openapi3.NewObjectSchema().
+								WithPropertyRef("prop2", &openapi3.SchemaRef{
+									Ref:   "",
+									Value: openapi3.NewStringSchema(),
+								}),
+						}),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.DeepEqual(t, clearRefFromSchemaRefs(tt.args.schemaRefs), tt.want, cmpopts.IgnoreUnexported(openapi3.Schema{}), cmpopts.IgnoreTypes(openapi3.ExtensionProps{}))
+		})
+	}
+}
