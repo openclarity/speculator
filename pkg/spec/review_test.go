@@ -45,6 +45,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 	}
 	type args struct {
 		approvedReviews *ApprovedSpecReview
+		specVersion     OASVersion
 	}
 	tests := []struct {
 		name     string
@@ -72,6 +73,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			args: args{
+				specVersion: OASv3,
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
 						"/api/1": &NewTestPathItem().
@@ -104,6 +106,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 								WithOperation(http.MethodGet, NewOperation(t, DataCombined).Op).
 								WithPathParams("param1", oapi_spec.NewInt64Schema()).PathItem,
 						},
+						SpecVersion: OASv3,
 					},
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
@@ -135,6 +138,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			args: args{
+				specVersion: OASv2,
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
 						"/api/1": &NewTestPathItem().
@@ -177,6 +181,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 							"/api/1": &NewTestPathItem().
 								WithOperation(http.MethodPost, NewOperation(t, Data).Op).PathItem,
 						},
+						SpecVersion: OASv2,
 					},
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{
@@ -213,6 +218,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			args: args{
+				specVersion: OASv3,
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
 						"/anything": &NewTestPathItem().
@@ -250,6 +256,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 								WithOperation(http.MethodGet, NewOperation(t, Data).Op).
 								WithPathParams("test", oapi_spec.NewStringSchema()).PathItem,
 						},
+						SpecVersion: OASv3,
 					},
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
@@ -284,6 +291,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			args: args{
+				specVersion: OASv3,
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
 						"/api/1": &NewTestPathItem().
@@ -344,6 +352,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 								WithPathParams("param1", oapi_spec.NewInt64Schema()).
 								WithPathParams("param2", oapi_spec.NewInt64Schema()).PathItem,
 						},
+						SpecVersion: OASv3,
 					},
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
@@ -381,6 +390,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 				},
 			},
 			args: args{
+				specVersion: OASv3,
 				approvedReviews: &ApprovedSpecReview{
 					PathToPathItem: map[string]*oapi_spec.PathItem{
 						"/api/1": &NewTestPathItem().WithOperation(http.MethodGet,
@@ -446,6 +456,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 							BasicAuthSecuritySchemeKey: &oapi_spec.SecuritySchemeRef{Value: NewBasicAuthSecurityScheme()},
 							OAuth2SecuritySchemeKey:    &oapi_spec.SecuritySchemeRef{Value: NewOAuth2SecurityScheme(nil)},
 						},
+						SpecVersion: OASv3,
 					},
 					LearningSpec: &LearningSpec{
 						PathItems: map[string]*oapi_spec.PathItem{},
@@ -473,7 +484,7 @@ func TestSpec_ApplyApprovedReview(t *testing.T) {
 					ApprovedPathTrie: pathtrie.New(),
 				},
 			}
-			err := s.ApplyApprovedReview(tt.args.approvedReviews)
+			err := s.ApplyApprovedReview(tt.args.approvedReviews, tt.args.specVersion)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Error response not as expected. want error: %v. error: %v", tt.wantErr, err)
 				return

@@ -27,11 +27,12 @@ import (
 )
 
 type ProvidedSpec struct {
-	Doc *openapi3.T
+	Doc                 *openapi3.T
+	OriginalSpecVersion OASVersion
 }
 
 func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]string) error {
-	doc, err := LoadAndValidateRawJSONSpec(providedSpec)
+	doc, oasVersion, err := LoadAndValidateRawJSONSpec(providedSpec)
 	if err != nil {
 		return fmt.Errorf("failed to load and validate spec: %w", err)
 	}
@@ -41,6 +42,7 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 	}
 	// will save doc without refs for proper diff logic
 	s.ProvidedSpec.Doc = clearRefFromDoc(doc)
+	s.ProvidedSpec.OriginalSpecVersion = oasVersion
 
 	// path trie need to be repopulated from start on each new spec
 	s.ProvidedPathTrie = pathtrie.New()
@@ -53,17 +55,17 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 	return nil
 }
 
-func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, error) {
+func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 	// Convert YAML to JSON. Since JSON is a subset of YAML, passing JSON through
 	// this method should be a no-op.
 	jsonSpec, err := yaml.YAMLToJSON(spec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert provided spec into json: %s. %v", spec, err)
+		return nil, Unknown, fmt.Errorf("failed to convert provided spec into json: %s. %v", spec, err)
 	}
 
 	oasVersion, err := GetJsonSpecVersion(jsonSpec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get spec version: %s. %v", jsonSpec, err)
+		return nil, Unknown, fmt.Errorf("failed to get spec version: %s. %v", jsonSpec, err)
 	}
 
 	var doc *openapi3.T
@@ -71,22 +73,26 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, error) {
 	case OASv2:
 		if doc, err = LoadAndValidateRawJSONSpecV3FromV2(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 2.0: %s. %v", jsonSpec, err)
-			return nil, fmt.Errorf("provided spec is not valid OpenAPI 2.0: %w", err)
+			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 2.0: %w", err)
 		}
 	case OASv3:
 		if doc, err = LoadAndValidateRawJSONSpecV3(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
-			return nil, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
+			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
 		}
 	default:
-		return nil, fmt.Errorf("unsupported spec version (%v)", oasVersion)
+		return nil, Unknown, fmt.Errorf("unsupported spec version (%v)", oasVersion)
 	}
 
-	return doc, nil
+	return doc, oasVersion, nil
 }
 
 func (p *ProvidedSpec) GetPathItem(path string) *openapi3.PathItem {
 	return p.Doc.Paths.Find(path)
+}
+
+func (s *ProvidedSpec) GetSpecVersion() OASVersion {
+	return s.OriginalSpecVersion
 }
 
 func (p *ProvidedSpec) GetBasePath() string {

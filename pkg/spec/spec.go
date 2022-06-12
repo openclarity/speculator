@@ -171,8 +171,8 @@ func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	return nil
 }
 
-func (s *Spec) GenerateOASYaml() ([]byte, error) {
-	oasJSON, err := s.GenerateOASJson()
+func (s *Spec) GenerateOASYaml(version OASVersion) ([]byte, error) {
+	oasJSON, err := s.GenerateOASJson(version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate json spec: %w", err)
 	}
@@ -185,7 +185,7 @@ func (s *Spec) GenerateOASYaml() ([]byte, error) {
 	return oasYaml, nil
 }
 
-func (s *Spec) GenerateOASJson() ([]byte, error) {
+func (s *Spec) GenerateOASJson(version OASVersion) ([]byte, error) {
 	// yaml.Marshal does not omit empty fields
 	var schemas oapi_spec.Schemas
 
@@ -211,12 +211,25 @@ func (s *Spec) GenerateOASJson() ([]byte, error) {
 		},
 	}
 
-	ret, err := json.Marshal(generatedSpec)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal the spec. %v", err)
+	var ret []byte
+	if version == OASv2 {
+		generatedSpecV2, err := openapi2conv.FromV3(generatedSpec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert spec from v3: %v", err)
+		}
+
+		ret, err = json.Marshal(generatedSpecV2)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal the spec. %v", err)
+		}
+	} else {
+		ret, err = json.Marshal(generatedSpec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal the spec. %v", err)
+		}
 	}
 
-	if _, err = LoadAndValidateRawJSONSpecV3(ret); err != nil {
+	if _, _, err = LoadAndValidateRawJSONSpec(ret); err != nil {
 		log.Errorf("Failed to validate the spec. %v\n\nspec: %s", err, ret)
 		return nil, fmt.Errorf("failed to validate the spec. %w", err)
 	}

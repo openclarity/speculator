@@ -150,6 +150,15 @@ func (s *Speculator) HasApprovedSpec(key SpecKey) bool {
 	return spec.HasApprovedSpec()
 }
 
+func (s *Speculator) GetApprovedSpecVersion(key SpecKey) _spec.OASVersion {
+	spec, ok := s.Specs[key]
+	if !ok {
+		return _spec.Unknown
+	}
+
+	return spec.ApprovedSpec.GetSpecVersion()
+}
+
 func (s *Speculator) LoadProvidedSpec(key SpecKey, providedSpec []byte, pathToPathID map[string]string) error {
 	spec, ok := s.Specs[key]
 	if !ok {
@@ -190,10 +199,19 @@ func (s *Speculator) HasProvidedSpec(key SpecKey) bool {
 	return spec.HasProvidedSpec()
 }
 
+func (s *Speculator) GetProvidedSpecVersion(key SpecKey) _spec.OASVersion {
+	spec, ok := s.Specs[key]
+	if !ok {
+		return _spec.Unknown
+	}
+
+	return spec.ProvidedSpec.GetSpecVersion()
+}
+
 func (s *Speculator) DumpSpecs() {
 	log.Infof("Generating Open API Specs...\n")
 	for specKey, spec := range s.Specs {
-		approvedYaml, err := spec.GenerateOASYaml()
+		approvedYaml, err := spec.GenerateOASYaml(_spec.OASv3)
 		if err != nil {
 			log.Errorf("failed to generate OAS yaml for %v.: %v", specKey, err)
 			continue
@@ -202,8 +220,8 @@ func (s *Speculator) DumpSpecs() {
 	}
 }
 
-func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview) error {
-	if err := s.Specs[specKey].ApplyApprovedReview(approvedReview); err != nil {
+func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.ApprovedSpecReview, version _spec.OASVersion) error {
+	if err := s.Specs[specKey].ApplyApprovedReview(approvedReview, version); err != nil {
 		return fmt.Errorf("failed to apply approved review for spec: %v. %w", specKey, err)
 	}
 	return nil

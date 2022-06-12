@@ -39,19 +39,22 @@ func TestSpec_LoadProvidedSpec(t *testing.T) {
 	v3, err := LoadAndValidateRawJSONSpecV3([]byte(jsonSpec))
 	assert.NilError(t, err)
 	wantProvidedSpec := &ProvidedSpec{
-		Doc: v3,
+		Doc:                 v3,
+		OriginalSpecVersion: OASv3,
 	}
 
 	v2, err := LoadAndValidateRawJSONSpecV3FromV2([]byte(jsonSpecV2))
 	assert.NilError(t, err)
 	wantProvidedSpecV2 := &ProvidedSpec{
-		Doc: clearRefFromDoc(v2),
+		Doc:                 clearRefFromDoc(v2),
+		OriginalSpecVersion: OASv2,
 	}
 
 	wantProvidedSpecWithRefAfterRemoveRef := &ProvidedSpec{
 		Doc: &openapi3.T{
 			Paths: openapi3.Paths{},
 		},
+		OriginalSpecVersion: OASv3,
 	}
 	err = json.Unmarshal([]byte(jsonSpecWithRefAfterRemoveRef), wantProvidedSpecWithRefAfterRemoveRef.Doc)
 	assert.NilError(t, err)
@@ -689,25 +692,17 @@ func Test_clearRefFromOperation(t *testing.T) {
 					RequestBody: &openapi3.RequestBodyRef{
 						Ref: "ref-request-body",
 						Value: openapi3.NewRequestBody().
-							WithJSONSchemaRef(openapi3.NewSchemaRef("",
+							WithJSONSchemaRef(openapi3.NewSchemaRef("ref",
 								openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
 					},
 				},
 			},
 			want: &openapi3.Operation{
-				Responses: openapi3.Responses{
-					"response1": {
-						Ref: "",
-						Value: openapi3.NewResponse().
-							WithJSONSchemaRef(openapi3.NewSchemaRef("",
-								openapi3.NewObjectSchema().WithItems(openapi3.NewInt64Schema()))),
-					},
-					"response2": {
-						Ref: "",
-						Value: openapi3.NewResponse().
-							WithJSONSchemaRef(openapi3.NewSchemaRef("",
-								openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
-					},
+				RequestBody: &openapi3.RequestBodyRef{
+					Ref: "",
+					Value: openapi3.NewRequestBody().
+						WithJSONSchemaRef(openapi3.NewSchemaRef("",
+							openapi3.NewObjectSchema().WithItems(openapi3.NewStringSchema()))),
 				},
 			},
 		},

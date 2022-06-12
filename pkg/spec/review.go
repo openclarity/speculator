@@ -89,7 +89,7 @@ func (s *Spec) createLearningParametrizedPaths() *LearningParametrizedPaths {
 	return &learningParametrizedPaths
 }
 
-func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
+func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview, version OASVersion) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -128,9 +128,12 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 		clonedSpec.ApprovedSpec.SecuritySchemes = updateSecuritySchemesFromPathItem(clonedSpec.ApprovedSpec.SecuritySchemes, mergedPathItem)
 	}
 
-	if _, err := clonedSpec.GenerateOASJson(); err != nil {
+	if _, err := clonedSpec.GenerateOASJson(version); err != nil {
 		return fmt.Errorf("failed to generate Open API Spec. %w", err)
 	}
+
+	clonedSpec.ApprovedSpec.SpecVersion = version
+
 	s.SpecInfo = clonedSpec.SpecInfo
 
 	return nil
