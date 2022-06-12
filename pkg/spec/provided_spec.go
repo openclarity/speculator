@@ -16,7 +16,6 @@
 package spec
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -31,16 +30,8 @@ type ProvidedSpec struct {
 	Doc *openapi3.T
 }
 
-type openapi3header struct {
-	OpenAPI *string `json:"openapi" yaml:"openapi"` // Required
-}
-
-type openapi2header struct {
-	Swagger *string `json:"swagger" yaml:"swagger"`
-}
-
 func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]string) error {
-	doc, err := loadAndValidateRawJSONSpec(providedSpec)
+	doc, err := LoadAndValidateRawJSONSpec(providedSpec)
 	if err != nil {
 		return fmt.Errorf("failed to load and validate spec: %w", err)
 	}
@@ -62,7 +53,7 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 	return nil
 }
 
-func loadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, error) {
+func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, error) {
 	// Convert YAML to JSON. Since JSON is a subset of YAML, passing JSON through
 	// this method should be a no-op.
 	jsonSpec, err := yaml.YAMLToJSON(spec)
@@ -70,29 +61,25 @@ func loadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, error) {
 		return nil, fmt.Errorf("failed to convert provided spec into json: %s. %v", spec, err)
 	}
 
-	var v3header openapi3header
-	if err := json.Unmarshal(jsonSpec, &v3header); err != nil {
-		return nil, fmt.Errorf("failed to unmarshel to v3header. %w", err)
-	}
-
-	var v2header openapi2header
-	if err := json.Unmarshal(jsonSpec, &v2header); err != nil {
-		return nil, fmt.Errorf("failed to unmarshel to v2header. %w", err)
+	oasVersion, err := GetJsonSpecVersion(jsonSpec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get spec version: %s. %v", jsonSpec, err)
 	}
 
 	var doc *openapi3.T
-	if v3header.OpenAPI != nil {
-		if doc, err = LoadAndValidateRawJSONSpecV3(jsonSpec); err != nil {
-			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
-			return nil, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
-		}
-	} else if v2header.Swagger != nil {
+	switch oasVersion {
+	case OASv2:
 		if doc, err = LoadAndValidateRawJSONSpecV3FromV2(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 2.0: %s. %v", jsonSpec, err)
 			return nil, fmt.Errorf("provided spec is not valid OpenAPI 2.0: %w", err)
 		}
-	} else {
-		return nil, fmt.Errorf("provided spec missing spec header: %w", err)
+	case OASv3:
+		if doc, err = LoadAndValidateRawJSONSpecV3(jsonSpec); err != nil {
+			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
+			return nil, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported spec version (%v)", oasVersion)
 	}
 
 	return doc, nil
