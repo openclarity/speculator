@@ -43,6 +43,7 @@ func (s *Spec) LoadProvidedSpec(providedSpec []byte, pathToPathID map[string]str
 	// will save doc without refs for proper diff logic
 	s.ProvidedSpec.Doc = clearRefFromDoc(doc)
 	s.ProvidedSpec.OriginalSpecVersion = oasVersion
+	log.Debugf("Setting provided spec version %q", s.ProvidedSpec.GetSpecVersion())
 
 	// path trie need to be repopulated from start on each new spec
 	s.ProvidedPathTrie = pathtrie.New()
@@ -71,11 +72,13 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 	var doc *openapi3.T
 	switch oasVersion {
 	case OASv2:
+		log.Debugf("OASv2 spec provided")
 		if doc, err = LoadAndValidateRawJSONSpecV3FromV2(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 2.0: %s. %v", jsonSpec, err)
 			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 2.0: %w", err)
 		}
 	case OASv3:
+		log.Debugf("OASv3 spec provided")
 		if doc, err = LoadAndValidateRawJSONSpecV3(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
 			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)

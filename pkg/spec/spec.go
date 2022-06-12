@@ -213,6 +213,7 @@ func (s *Spec) GenerateOASJson(version OASVersion) ([]byte, error) {
 
 	var ret []byte
 	if version == OASv2 {
+		log.Debugf("Generating OASv2 spec")
 		generatedSpecV2, err := openapi2conv.FromV3(generatedSpec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert spec from v3: %v", err)
@@ -223,6 +224,7 @@ func (s *Spec) GenerateOASJson(version OASVersion) ([]byte, error) {
 			return nil, fmt.Errorf("failed to marshal the spec. %v", err)
 		}
 	} else {
+		log.Debugf("Generating OASv3 spec")
 		ret, err = json.Marshal(generatedSpec)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal the spec. %v", err)
