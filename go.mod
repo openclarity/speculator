@@ -3,10 +3,11 @@ module github.com/openclarity/speculator
 go 1.15
 
 require (
-	github.com/getkin/kin-openapi v0.94.0
+	github.com/getkin/kin-openapi v0.97.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/google/go-cmp v0.5.5
 	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/onsi/gomega v1.14.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
