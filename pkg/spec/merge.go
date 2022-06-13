@@ -30,11 +30,11 @@ func mergeOperation(operation, operation2 *spec.Operation) (*spec.Operation, []c
 		return op.(*spec.Operation), nil
 	}
 
-	var paramConflicts, resConflicts []conflict
+	var requestBodyConflicts, paramConflicts, resConflicts []conflict
 
 	ret := spec.NewOperation()
 
-	ret.RequestBody, paramConflicts = mergeRequestBody(operation.RequestBody, operation2.RequestBody,
+	ret.RequestBody, requestBodyConflicts = mergeRequestBody(operation.RequestBody, operation2.RequestBody,
 		field.NewPath("requestBody"))
 	ret.Parameters, paramConflicts = mergeParameters(operation.Parameters, operation2.Parameters,
 		field.NewPath("parameters"))
@@ -44,6 +44,7 @@ func mergeOperation(operation, operation2 *spec.Operation) (*spec.Operation, []c
 	ret.Security = mergeOperationSecurity(operation.Security, operation2.Security)
 
 	conflicts := append(paramConflicts, resConflicts...)
+	conflicts = append(conflicts, requestBodyConflicts...)
 
 	if len(conflicts) > 0 {
 		log.Warnf("Found conflicts while merging operation: %v and operation: %v. conflicts: %v", operation, operation2, conflicts)

@@ -17,11 +17,11 @@ package spec
 
 import (
 	"encoding/json"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"reflect"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gotest.tools/assert"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"

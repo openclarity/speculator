@@ -17,7 +17,6 @@ package spec
 
 import (
 	"encoding/json"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"net/url"
 	"reflect"
 	"strings"
@@ -26,6 +25,7 @@ import (
 
 	spec "github.com/getkin/kin-openapi/openapi3"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	log "github.com/sirupsen/logrus"
 	"github.com/yudai/gojsondiff"
 	"gotest.tools/assert"
@@ -302,7 +302,6 @@ func TestGenerateSpecOperation1(t *testing.T) {
 				return
 			}
 
-			//assert.DeepEqual(t, got, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}), cmpopts.IgnoreTypes(spec.ExtensionProps{}))
 			if !validateOperation(t, got, tt.want) {
 				t.Errorf("GenerateSpecOperation() got = %v, want %v", marshal(got), marshal(tt.want))
 			}

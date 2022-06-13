@@ -16,12 +16,12 @@
 package spec
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"gotest.tools/assert"
 	"reflect"
 	"testing"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 )
 
 func newBoolSchemaWithAllowEmptyValue() *spec.Schema {
@@ -174,9 +174,8 @@ var formDataBody = "--cdce6441022a3dcf\r\n" +
 
 func Test_addMultipartFormDataParams(t *testing.T) {
 	type args struct {
-		operation *spec.Operation
-		body      string
-		params    map[string]string
+		body   string
+		params map[string]string
 	}
 	tests := []struct {
 		name    string

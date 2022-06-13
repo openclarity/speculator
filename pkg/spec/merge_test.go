@@ -1417,10 +1417,10 @@ func Test_makeParametersMapByName(t *testing.T) {
 				},
 			},
 			want: map[string]*spec.ParameterRef{
-				"header":  &spec.ParameterRef{Value: spec.NewHeaderParameter("header")},
-				"header2": &spec.ParameterRef{Value: spec.NewHeaderParameter("header2")},
-				"path":    &spec.ParameterRef{Value: spec.NewPathParameter("path")},
-				"path2":   &spec.ParameterRef{Value: spec.NewPathParameter("path2")},
+				"header":  {Value: spec.NewHeaderParameter("header")},
+				"header2": {Value: spec.NewHeaderParameter("header2")},
+				"path":    {Value: spec.NewPathParameter("path")},
+				"path2":   {Value: spec.NewPathParameter("path2")},
 			},
 		},
 	}

@@ -16,14 +16,14 @@
 package spec
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"gotest.tools/assert"
 	"net/http"
 	"reflect"
 	"testing"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	uuid "github.com/satori/go.uuid"
+	"gotest.tools/assert"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"
 )

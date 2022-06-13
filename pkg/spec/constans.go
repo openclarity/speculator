@@ -16,10 +16,6 @@
 package spec
 
 const (
-	formatUUID = "uuid"
-)
-
-const (
 	contentTypeHeaderName       = "content-type"
 	acceptTypeHeaderName        = "accept"
 	authorizationTypeHeaderName = "authorization"

@@ -64,7 +64,7 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 		return nil, Unknown, fmt.Errorf("failed to convert provided spec into json: %s. %v", spec, err)
 	}
 
-	oasVersion, err := GetJsonSpecVersion(jsonSpec)
+	oasVersion, err := GetJSONSpecVersion(jsonSpec)
 	if err != nil {
 		return nil, Unknown, fmt.Errorf("failed to get spec version: %s. %v", jsonSpec, err)
 	}
@@ -83,6 +83,8 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
 			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
 		}
+	case Unknown:
+		return nil, Unknown, fmt.Errorf("unknown spec version (%v)", oasVersion)
 	default:
 		return nil, Unknown, fmt.Errorf("unsupported spec version (%v)", oasVersion)
 	}
@@ -94,8 +96,8 @@ func (p *ProvidedSpec) GetPathItem(path string) *openapi3.PathItem {
 	return p.Doc.Paths.Find(path)
 }
 
-func (s *ProvidedSpec) GetSpecVersion() OASVersion {
-	return s.OriginalSpecVersion
+func (p *ProvidedSpec) GetSpecVersion() OASVersion {
+	return p.OriginalSpecVersion
 }
 
 func (p *ProvidedSpec) GetBasePath() string {
@@ -106,16 +108,16 @@ func (p *ProvidedSpec) GetBasePath() string {
 
 		// strip scheme if exits
 		urlNoScheme := server.URL
-		schemeSplittedUrl := strings.Split(server.URL, "://")
-		if len(schemeSplittedUrl) > 1 {
-			urlNoScheme = schemeSplittedUrl[1]
+		schemeSplittedURL := strings.Split(server.URL, "://")
+		if len(schemeSplittedURL) > 1 {
+			urlNoScheme = schemeSplittedURL[1]
 		}
 
 		// get path
 		var path string
-		splittedUrlNoScheme := strings.SplitN(urlNoScheme, "/", 2)
-		if len(splittedUrlNoScheme) > 1 {
-			path = splittedUrlNoScheme[1]
+		splittedURLNoScheme := strings.SplitN(urlNoScheme, "/", 2) // nolint:gomnd
+		if len(splittedURLNoScheme) > 1 {
+			path = splittedURLNoScheme[1]
 		}
 		if path == "" {
 			continue

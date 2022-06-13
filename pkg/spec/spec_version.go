@@ -30,12 +30,14 @@ const (
 
 func (o OASVersion) String() string {
 	switch o {
+	case Unknown:
+		return "Unknown"
 	case OASv2:
 		return "OASv2"
 	case OASv3:
 		return "OASv3"
 	}
-	return "unknown"
+	return "Unknown"
 }
 
 type oasV3header struct {
@@ -46,7 +48,7 @@ type oasV2header struct {
 	Swagger *string `json:"swagger" yaml:"swagger"`
 }
 
-func GetJsonSpecVersion(jsonSpec []byte) (OASVersion, error) {
+func GetJSONSpecVersion(jsonSpec []byte) (OASVersion, error) {
 	var v3header oasV3header
 	if err := json.Unmarshal(jsonSpec, &v3header); err != nil {
 		return Unknown, fmt.Errorf("failed to unmarshel to v3header. %w", err)

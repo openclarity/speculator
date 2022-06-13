@@ -17,11 +17,11 @@ package spec
 
 import (
 	"encoding/json"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"gotest.tools/assert"
 	"testing"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 )
 
 var (

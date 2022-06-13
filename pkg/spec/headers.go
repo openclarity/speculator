@@ -16,10 +16,10 @@
 package spec
 
 import (
-	log "github.com/sirupsen/logrus"
 	"strings"
 
 	spec "github.com/getkin/kin-openapi/openapi3"
+	log "github.com/sirupsen/logrus"
 )
 
 var defaultIgnoredHeaders = []string{
@@ -82,7 +82,7 @@ func (o *OperationGenerator) addCookieParam(operation *spec.Operation, headerVal
 	// Multiple cookie parameters are sent in the same header, separated by a semicolon and space.
 	for _, cookie := range strings.Split(headerValue, "; ") {
 		cookieKeyAndValue := strings.Split(cookie, "=")
-		if len(cookieKeyAndValue) != 2 {
+		if len(cookieKeyAndValue) != 2 { // nolint:gomnd
 			log.Warnf("unsupported cookie param. %v", cookie)
 			continue
 		}

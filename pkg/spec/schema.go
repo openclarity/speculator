@@ -118,10 +118,12 @@ func getSchemaFromValue(value string, shouldTryArraySchema bool, paramInType str
 		}
 	}
 
+	// nolint:gomnd
 	if _, err := strconv.ParseInt(value, 10, 64); err == nil {
 		return spec.NewInt64Schema()
 	}
 
+	// nolint:gomnd
 	if _, err := strconv.ParseFloat(value, 64); err == nil {
 		return spec.NewFloat64Schema()
 	}

@@ -42,13 +42,6 @@ func handleApplicationFormURLEncodedBody(operation *spec.Operation, securitySche
 			// https://datatracker.ietf.org/doc/html/rfc6750#section-2.2
 			operation, securitySchemes = handleAuthQueryParam(operation, securitySchemes, values)
 		} else {
-			var schema *spec.Schema
-			if len(values) == 0 || values[0] == "" {
-				schema = spec.NewBoolSchema()
-				schema.AllowEmptyValue = true
-			} else {
-				schema = getSchemaFromValues(values, true, spec.ParameterInQuery)
-			}
 			objSchema.WithProperty(key, getSchemaFromQueryValues(values))
 		}
 	}
@@ -57,7 +50,7 @@ func handleApplicationFormURLEncodedBody(operation *spec.Operation, securitySche
 		operationSetRequestBody(operation, spec.NewRequestBody().WithContent(spec.NewContentWithSchema(objSchema, []string{mediaTypeApplicationForm})))
 		// TODO: handle encoding
 		// https://swagger.io/docs/specification/describing-request-body/
-		//operation.RequestBody.Value.GetMediaType(mediaTypeApplicationForm).Encoding
+		// operation.RequestBody.Value.GetMediaType(mediaTypeApplicationForm).Encoding
 	}
 
 	return operation, securitySchemes, nil
