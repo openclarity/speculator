@@ -203,19 +203,19 @@ func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*s
 		return p, nil
 	}
 
-	tpe1, tpe2 := parameter.Schema.Value.Type, parameter2.Schema.Value.Type
-	if tpe1 != tpe2 {
+	type1, type2 := parameter.Schema.Value.Type, parameter2.Schema.Value.Type
+	if type1 != type2 {
 		return parameter, []conflict{
 			{
 				path: path,
 				obj1: parameter,
 				obj2: parameter2,
-				msg:  createConflictMsg(path, tpe1, tpe2),
+				msg:  createConflictMsg(path, type1, type2),
 			},
 		}
 	}
 
-	switch tpe1 {
+	switch type1 {
 	case spec.TypeBoolean, spec.TypeInteger, spec.TypeNumber, spec.TypeString:
 		schema, conflicts := mergeSchema(parameter.Schema.Value, parameter2.Schema.Value, path)
 		return parameter.WithSchema(schema), conflicts
@@ -227,7 +227,7 @@ func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*s
 		schema, conflicts := mergeSchema(parameter.Schema.Value, parameter2.Schema.Value, path.Child("schema"))
 		return parameter.WithSchema(schema), conflicts
 	default:
-		log.Warnf("not supported schema type in parameter: %v", tpe1)
+		log.Warnf("not supported schema type in parameter: %v", type1)
 	}
 
 	return parameter, nil

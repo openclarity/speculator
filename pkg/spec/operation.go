@@ -31,13 +31,6 @@ import (
 	"github.com/openclarity/speculator/pkg/utils"
 )
 
-//var (
-//	defaultSchema   = &spec.Schema{}
-//	defaultResponse = spec.NewResponse().
-//			WithDescription("Default Response").
-//			WithSchema(defaultSchema.AddType(schemaTypeObject, "").SetProperty("message", *spec.StringProperty()))
-//)
-
 func getSchema(value interface{}) (schema *spec.Schema, err error) {
 	switch value.(type) {
 	case bool:
@@ -334,7 +327,7 @@ func CloneOperation(op *spec.Operation) (*spec.Operation, error) {
 
 func getBearerAuthClaims(bearerToken string) (jwt.MapClaims, bool) {
 	if len(bearerToken) == 0 {
-		log.Warnf("authZ token provided with no value, assuming authentication required anyway")
+		log.Warnf("authZ token provided with no value.")
 		return nil, false
 	}
 
@@ -342,13 +335,13 @@ func getBearerAuthClaims(bearerToken string) (jwt.MapClaims, bool) {
 	parser := jwt.Parser{}
 	token, _, err := parser.ParseUnverified(bearerToken, jwt.MapClaims{})
 	if err != nil {
-		log.Warnf("authZ token is not a JWT, assuming authentication required anyway")
+		log.Warnf("authZ token is not a JWT.")
 		return nil, false
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		log.Infof("authZ token had unintelligble claims, assuming authentication required anyway")
+		log.Infof("authZ token had unintelligble claims.")
 		return nil, false
 	}
 

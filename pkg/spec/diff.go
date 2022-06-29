@@ -290,19 +290,19 @@ func compareObjects(obj1, obj2 interface{}) (hasDiff bool, err error) {
 func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) *oapi_spec.Operation {
 	// keep only the provided status code
 	if op.Responses != nil {
-		filterResponses := make(oapi_spec.Responses)
+		filteredResponses := make(oapi_spec.Responses)
 		if responseRef, ok := op.Responses[statusCodeToKeep]; ok {
-			filterResponses[statusCodeToKeep] = responseRef
+			filteredResponses[statusCodeToKeep] = responseRef
 		}
 		// keep default if exists
 		if responseRef, ok := op.Responses["default"]; ok {
-			filterResponses["default"] = responseRef
+			filteredResponses["default"] = responseRef
 		}
 
-		if len(filterResponses) == 0 {
+		if len(filteredResponses) == 0 {
 			op.Responses = nil
 		} else {
-			op.Responses = filterResponses
+			op.Responses = filteredResponses
 		}
 	}
 

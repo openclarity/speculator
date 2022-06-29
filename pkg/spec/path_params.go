@@ -81,7 +81,7 @@ func getOnlyIndexedPartFromPaths(paths map[string]bool, i int) []string {
 }
 
 // If all params in paramList can be guessed as same schema, this schema will be returned, otherwise,
-// if there are a couple of formats, string schema with not format will be return.
+// if there is a couple of formats, string schema with no format will be returned.
 func getParamSchema(paramsList []string) *spec.Schema {
 	parameterFormat := paramFormatUnset
 

@@ -567,3 +567,48 @@ func Test_handleAuthReqHeader(t *testing.T) {
 		})
 	}
 }
+
+func Test_getScopesFromJWTClaims(t *testing.T) {
+	type args struct {
+		claims jwt.MapClaims
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "nil claims - expected nil scopes",
+			args: args{
+				claims: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "no scopes defined - expected nil scopes",
+			args: args{
+				claims: jwt.MapClaims{
+					"no-scopes": "123",
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "no scopes defined - expected nil scopes",
+			args: args{
+				claims: jwt.MapClaims{
+					"no-scope": "123",
+					"scope":    "scope1 scope2 scope3",
+				},
+			},
+			want: []string{"scope1", "scope2", "scope3"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getScopesFromJWTClaims(tt.args.claims); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getScopesFromJWTClaims() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
