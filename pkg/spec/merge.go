@@ -348,14 +348,14 @@ func mergeResponse(response, response2 *spec.Response, path *field.Path) (*spec.
 	var retConflicts []conflict
 	retResponse := spec.NewResponse()
 	if response.Description != nil {
-		retResponse.WithDescription(*response.Description)
+		retResponse = retResponse.WithDescription(*response.Description)
 	} else if response2.Description != nil {
-		retResponse.WithDescription(*response2.Description)
+		retResponse = retResponse.WithDescription(*response2.Description)
 	}
 
 	content, conflicts := mergeContent(response.Content, response2.Content, path.Child("content"))
 	if len(content) > 0 {
-		retResponse.WithContent(content)
+		retResponse = retResponse.WithContent(content)
 	}
 	retConflicts = append(retConflicts, conflicts...)
 
@@ -440,7 +440,7 @@ func mergeHeader(header, header2 *spec.Header, path *field.Path) (*spec.Header, 
 	}
 
 	schema, conflicts := mergeSchema(header.Schema.Value, header2.Schema.Value, path)
-	header.WithSchema(schema)
+	header.Parameter = *header.WithSchema(schema)
 
 	return header, conflicts
 }

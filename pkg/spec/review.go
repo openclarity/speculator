@@ -135,7 +135,7 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview, version 
 	clonedSpec.ApprovedSpec.SpecVersion = version
 
 	s.SpecInfo = clonedSpec.SpecInfo
-	log.Debugf("Setting approved spec version %q for %s:%s", s.ApprovedSpec.GetSpecVersion(), s.Host, s.Port)
+	log.Debugf("Setting approved spec with version %q for %s:%s", s.ApprovedSpec.GetSpecVersion(), s.Host, s.Port)
 
 	return nil
 }

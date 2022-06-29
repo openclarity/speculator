@@ -2165,3 +2165,143 @@ func Test_mergeRequestBody(t *testing.T) {
 		})
 	}
 }
+
+func Test_mergeContent(t *testing.T) {
+	type args struct {
+		content  spec.Content
+		content2 spec.Content
+		path     *field.Path
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  spec.Content
+		want1 []conflict
+	}{
+		{
+			name: "first is nil",
+			args: args{
+				content: nil,
+				content2: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: spec.Content{
+				"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "second is nil",
+			args: args{
+				content: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				content2: nil,
+				path:     nil,
+			},
+			want: spec.Content{
+				"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "both are nil",
+			args: args{
+				content:  nil,
+				content2: nil,
+				path:     nil,
+			},
+			want:  spec.NewContent(),
+			want1: nil,
+		},
+		{
+			name: "non mutual contents",
+			args: args{
+				content: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				content2: spec.Content{
+					"xml": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: spec.Content{
+				"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				"xml":  spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual contents",
+			args: args{
+				content: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				content2: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: spec.Content{
+				"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual and non mutual contents",
+			args: args{
+				content: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+					"foo":  spec.NewMediaType().WithSchema(spec.NewInt64Schema()),
+				},
+				content2: spec.Content{
+					"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+					"xml":  spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				path: nil,
+			},
+			want: spec.Content{
+				"json": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				"foo":  spec.NewMediaType().WithSchema(spec.NewInt64Schema()),
+				"xml":  spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual contents with conflicts",
+			args: args{
+				content: spec.Content{
+					"xml": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+				},
+				content2: spec.Content{
+					"xml": spec.NewMediaType().WithSchema(spec.NewInt64Schema()),
+				},
+				path: field.NewPath("start"),
+			},
+			want: spec.Content{
+				"xml": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
+			},
+			want1: []conflict{
+				{
+					path: field.NewPath("start").Child("xml"),
+					obj1: spec.NewStringSchema(),
+					obj2: spec.NewInt64Schema(),
+					msg:  createConflictMsg(field.NewPath("start").Child("xml"), spec.TypeString, spec.TypeInteger),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := mergeContent(tt.args.content, tt.args.content2, tt.args.path)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mergeContent() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("mergeContent() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}

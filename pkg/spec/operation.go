@@ -100,7 +100,7 @@ func getObjectSchema(value interface{}) (schema *spec.Schema, err error) {
 		if s, err := getSchema(val); err != nil {
 			return nil, fmt.Errorf("failed to get schema from string map. key=%v, value=%v: %w", key, val, err)
 		} else {
-			schema.WithProperty(escapeString(key), s)
+			schema = schema.WithProperty(escapeString(key), s)
 		}
 	}
 
@@ -289,7 +289,7 @@ func (o *OperationGenerator) GenerateSpecOperation(data *HTTPInteractionData, se
 					return nil, fmt.Errorf("failed to get schema from response body. body=%v: %w", respBodyJSON, err)
 				}
 
-				response.WithJSONSchema(respSchema)
+				response = response.WithJSONSchema(respSchema)
 			default:
 				log.Infof("Treating %v as default response content type (no schema)", respContentType)
 			}
@@ -325,7 +325,7 @@ func CloneOperation(op *spec.Operation) (*spec.Operation, error) {
 	return &out, nil
 }
 
-func getBearerAuthClaims(bearerToken string) (jwt.MapClaims, bool) {
+func getBearerAuthClaims(bearerToken string) (claims jwt.MapClaims, found bool) {
 	if len(bearerToken) == 0 {
 		log.Warnf("authZ token provided with no value.")
 		return nil, false
