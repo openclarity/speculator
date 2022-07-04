@@ -19,12 +19,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 type ApprovedSpec struct {
-	PathItems           map[string]*oapi_spec.PathItem
-	SecurityDefinitions oapi_spec.SecurityDefinitions
+	PathItems       map[string]*oapi_spec.PathItem
+	SecuritySchemes oapi_spec.SecuritySchemes
+	SpecVersion     OASVersion
 }
 
 func (a *ApprovedSpec) GetPathItem(path string) *oapi_spec.PathItem {
@@ -32,6 +33,10 @@ func (a *ApprovedSpec) GetPathItem(path string) *oapi_spec.PathItem {
 		return pi
 	}
 	return nil
+}
+
+func (a *ApprovedSpec) GetSpecVersion() OASVersion {
+	return a.SpecVersion
 }
 
 func (a *ApprovedSpec) Clone() (*ApprovedSpec, error) {

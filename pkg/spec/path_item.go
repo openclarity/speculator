@@ -18,7 +18,7 @@ package spec
 import (
 	"net/http"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 func MergePathItems(dst, src *oapi_spec.PathItem) *oapi_spec.PathItem {

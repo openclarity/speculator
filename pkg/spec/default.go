@@ -16,7 +16,7 @@
 package spec
 
 import (
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"
 )
@@ -27,12 +27,12 @@ func CreateDefaultSpec(host string, port string, config OperationGeneratorConfig
 			Host: host,
 			Port: port,
 			LearningSpec: &LearningSpec{
-				PathItems:           map[string]*spec.PathItem{},
-				SecurityDefinitions: map[string]*spec.SecurityScheme{},
+				PathItems:       map[string]*spec.PathItem{},
+				SecuritySchemes: spec.SecuritySchemes{},
 			},
 			ApprovedSpec: &ApprovedSpec{
-				PathItems:           map[string]*spec.PathItem{},
-				SecurityDefinitions: map[string]*spec.SecurityScheme{},
+				PathItems:       map[string]*spec.PathItem{},
+				SecuritySchemes: spec.SecuritySchemes{},
 			},
 			ApprovedPathTrie: pathtrie.New(),
 			ProvidedPathTrie: pathtrie.New(),
@@ -43,22 +43,16 @@ func CreateDefaultSpec(host string, port string, config OperationGeneratorConfig
 
 func createDefaultSwaggerInfo() *spec.Info {
 	return &spec.Info{
-		InfoProps: spec.InfoProps{
-			Description:    "This is a generated Open API Spec",
-			Title:          "Swagger",
-			TermsOfService: "http://swagger.io/terms/",
-			Contact: &spec.ContactInfo{
-				ContactInfoProps: spec.ContactInfoProps{
-					Email: "apiteam@swagger.io",
-				},
-			},
-			License: &spec.License{
-				LicenseProps: spec.LicenseProps{
-					Name: "Apache 2.0",
-					URL:  "http://www.apache.org/licenses/LICENSE-2.0.html",
-				},
-			},
-			Version: "1.0.0",
+		Description:    "This is a generated Open API Spec",
+		Title:          "Swagger",
+		TermsOfService: "https://swagger.io/terms/",
+		Contact: &spec.Contact{
+			Email: "apiteam@swagger.io",
 		},
+		License: &spec.License{
+			Name: "Apache 2.0",
+			URL:  "https://www.apache.org/licenses/LICENSE-2.0.html",
+		},
+		Version: "1.0.0",
 	}
 }

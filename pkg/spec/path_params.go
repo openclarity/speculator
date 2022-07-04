@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -80,30 +80,30 @@ func getOnlyIndexedPartFromPaths(paths map[string]bool, i int) []string {
 	return ret
 }
 
-// If all params in paramList can be guessed as same type and format, this type and format will be returned, otherwise,
-// if there are couple of formats, type string and no format will be return.
-func getParamTypeAndFormat(paramsList []string) (string, string) {
+// If all params in paramList can be guessed as same schema, this schema will be returned, otherwise,
+// if there is a couple of formats, string schema with no format will be returned.
+func getParamSchema(paramsList []string) *spec.Schema {
 	parameterFormat := paramFormatUnset
 
 	for _, pathPart := range paramsList {
 		if isNumber(pathPart) {
 			// in case there is a conflict, we will return string as the type and empty format
 			if parameterFormat != paramFormatNumber && parameterFormat != paramFormatUnset {
-				return schemaTypeString, ""
+				return spec.NewStringSchema()
 			}
 			parameterFormat = paramFormatNumber
 			continue
 		}
 		if isUUID(pathPart) {
 			if parameterFormat != paramFormatUUID && parameterFormat != paramFormatUnset {
-				return schemaTypeString, ""
+				return spec.NewStringSchema()
 			}
 			parameterFormat = paramFormatUUID
 			continue
 		}
 		if isMixed(pathPart) {
 			if parameterFormat != paramFormatMixed && parameterFormat != paramFormatUnset {
-				return schemaTypeString, ""
+				return spec.NewStringSchema()
 			}
 			parameterFormat = paramFormatMixed
 		}
@@ -111,16 +111,16 @@ func getParamTypeAndFormat(paramsList []string) (string, string) {
 
 	switch parameterFormat {
 	case paramFormatMixed:
-		return schemaTypeString, ""
+		return spec.NewStringSchema()
 	case paramFormatUUID:
-		return schemaTypeString, formatUUID
+		return spec.NewUUIDSchema()
 	case paramFormatNumber:
-		return schemaTypeInteger, ""
+		return spec.NewInt64Schema()
 	case paramFormatUnset:
-		return schemaTypeString, ""
+		return spec.NewStringSchema()
 	}
 
-	return schemaTypeString, ""
+	return spec.NewStringSchema()
 }
 
 func isSuspectPathParam(pathPart string) bool {
@@ -168,11 +168,8 @@ func countDigitsInString(s string) int {
 	return count
 }
 
-func createPathParam(name, tpe, format string) *PathParam {
-	var pathParam PathParam
-
-	pathParam.Parameter = spec.PathParam(name)
-	pathParam.Typed(tpe, format)
-
-	return &pathParam
+func createPathParam(name string, schema *spec.Schema) *PathParam {
+	return &PathParam{
+		Parameter: spec.NewPathParameter(name).WithSchema(schema),
+	}
 }

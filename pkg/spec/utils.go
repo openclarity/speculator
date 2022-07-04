@@ -20,11 +20,11 @@ import (
 	"strconv"
 	"strings"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 // Note: securityDefinitions might be updated.
-func (s *Spec) telemetryToOperation(telemetry *Telemetry, securityDefinitions oapi_spec.SecurityDefinitions) (*oapi_spec.Operation, error) {
+func (s *Spec) telemetryToOperation(telemetry *Telemetry, securitySchemes oapi_spec.SecuritySchemes) (*oapi_spec.Operation, error) {
 	statusCode, err := strconv.Atoi(telemetry.Response.StatusCode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert status code: %v. %v", statusCode, err)
@@ -47,7 +47,7 @@ func (s *Spec) telemetryToOperation(telemetry *Telemetry, securityDefinitions oa
 		RespHeaders: ConvertHeadersToMap(telemetry.Response.Common.Headers),
 		QueryParams: queryParams,
 		statusCode:  statusCode,
-	}, securityDefinitions)
+	}, securitySchemes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate spec operation. %v", err)
 	}
@@ -69,11 +69,4 @@ func GetPathAndQuery(fullPath string) (path, query string) {
 	path = fullPath[:index]
 	query = fullPath[index+1:]
 	return
-}
-
-func GetContentTypeWithoutParameter(contentTypeHeaderField string) string {
-	// https://greenbytes.de/tech/webdav/rfc2616.html#media.types
-	// remove parameters if exists
-	contentTypeWithoutParams := strings.Split(contentTypeHeaderField, ";")[0]
-	return strings.TrimSpace(contentTypeWithoutParams)
 }

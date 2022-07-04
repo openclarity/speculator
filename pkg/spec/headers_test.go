@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 func Test_shouldIgnoreHeader(t *testing.T) {
@@ -93,19 +93,18 @@ func Test_addResponseHeader(t *testing.T) {
 				headerKey:   "X-Test-Uuid",
 				headerValue: "77e1c83b-7bb0-437b-bc50-a7a58e5660ac",
 			},
-			want: spec.NewResponse().
-				AddHeader("X-Test-Uuid", spec.ResponseHeader().Typed("string", "uuid")),
+			want: createTestResponse().
+				WithHeader("X-Test-Uuid", spec.NewUUIDSchema()).Response,
 		},
 		{
-			name: "collection",
+			name: "array",
 			args: args{
 				response:    spec.NewResponse(),
 				headerKey:   "X-Test-Array",
 				headerValue: "1,2,3,4",
 			},
-			want: spec.NewResponse().
-				AddHeader("X-Test-Array", spec.ResponseHeader().
-					CollectionOf(spec.NewItems().Typed("integer", ""), collectionFormatComma)),
+			want: createTestResponse().
+				WithHeader("X-Test-Array", spec.NewArraySchema().WithItems(spec.NewInt64Schema())).Response,
 		},
 		{
 			name: "date",
@@ -114,8 +113,8 @@ func Test_addResponseHeader(t *testing.T) {
 				headerKey:   "date",
 				headerValue: "Mon, 23 Aug 2021 06:52:48 GMT",
 			},
-			want: spec.NewResponse().
-				AddHeader("date", spec.ResponseHeader().Typed("string", "")),
+			want: createTestResponse().
+				WithHeader("date", spec.NewStringSchema()).Response,
 		},
 		{
 			name: "ignore header",
@@ -151,31 +150,31 @@ func Test_addHeaderParam(t *testing.T) {
 		{
 			name: "primitive",
 			args: args{
-				operation:   spec.NewOperation(""),
+				operation:   spec.NewOperation(),
 				headerKey:   "X-Test-Uuid",
 				headerValue: "77e1c83b-7bb0-437b-bc50-a7a58e5660ac",
 			},
-			want: spec.NewOperation("").
-				AddParam(spec.HeaderParam("X-Test-Uuid").Typed("string", "uuid")),
+			want: createTestOperation().WithParameter(spec.NewHeaderParameter("X-Test-Uuid").
+				WithSchema(spec.NewUUIDSchema())).Op,
 		},
 		{
-			name: "collection",
+			name: "array",
 			args: args{
-				operation:   spec.NewOperation(""),
+				operation:   spec.NewOperation(),
 				headerKey:   "X-Test-Array",
 				headerValue: "1,2,3,4",
 			},
-			want: spec.NewOperation("").AddParam(spec.HeaderParam("X-Test-Array").
-				CollectionOf(spec.NewItems().Typed("integer", ""), collectionFormatComma)),
+			want: createTestOperation().WithParameter(spec.NewHeaderParameter("X-Test-Array").
+				WithSchema(spec.NewArraySchema().WithItems(spec.NewInt64Schema()))).Op,
 		},
 		{
 			name: "ignore header",
 			args: args{
-				operation:   spec.NewOperation(""),
+				operation:   spec.NewOperation(),
 				headerKey:   "Accept",
 				headerValue: "",
 			},
-			want: spec.NewOperation(""),
+			want: spec.NewOperation(),
 		},
 	}
 	for _, tt := range tests {
@@ -242,6 +241,58 @@ func Test_createHeadersToIgnore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := createHeadersToIgnore(tt.args.headers); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createHeadersToIgnore() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOperationGenerator_addCookieParam(t *testing.T) {
+	op := NewOperationGenerator(OperationGeneratorConfig{})
+	type args struct {
+		operation   *spec.Operation
+		headerValue string
+	}
+	tests := []struct {
+		name string
+		args args
+		want *spec.Operation
+	}{
+		{
+			name: "sanity",
+			args: args{
+				operation:   spec.NewOperation(),
+				headerValue: "debug=0; csrftoken=BUSe35dohU3O1MZvDCUOJ",
+			},
+			want: createTestOperation().
+				WithParameter(spec.NewCookieParameter("debug").WithSchema(spec.NewInt64Schema())).
+				WithParameter(spec.NewCookieParameter("csrftoken").WithSchema(spec.NewStringSchema())).
+				Op,
+		},
+		{
+			name: "array",
+			args: args{
+				operation:   spec.NewOperation(),
+				headerValue: "array=1,2,3",
+			},
+			want: createTestOperation().
+				WithParameter(spec.NewCookieParameter("array").WithSchema(spec.NewArraySchema().WithItems(spec.NewInt64Schema()))).
+				Op,
+		},
+		{
+			name: "unsupported cookie param",
+			args: args{
+				operation:   spec.NewOperation(),
+				headerValue: "unsupported=unsupported=unsupported; csrftoken=BUSe35dohU3O1MZvDCUOJ",
+			},
+			want: createTestOperation().
+				WithParameter(spec.NewCookieParameter("csrftoken").WithSchema(spec.NewStringSchema())).
+				Op,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := op.addCookieParam(tt.args.operation, tt.args.headerValue); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("addCookieParam() = %v, want %v", got, tt.want)
 			}
 		})
 	}

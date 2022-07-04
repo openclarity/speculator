@@ -19,13 +19,23 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 func addQueryParam(operation *spec.Operation, key string, values []string) *spec.Operation {
-	queryParam := spec.QueryParam(key)
+	operation.AddParameter(spec.NewQueryParameter(key).WithSchema(getSchemaFromQueryValues(values)))
+	return operation
+}
 
-	return operation.AddParam(populateParam(queryParam, values, true))
+func getSchemaFromQueryValues(values []string) *spec.Schema {
+	var schema *spec.Schema
+	if len(values) == 0 || values[0] == "" {
+		schema = spec.NewBoolSchema()
+		schema.AllowEmptyValue = true
+	} else {
+		schema = getSchemaFromValues(values, true, spec.ParameterInQuery)
+	}
+	return schema
 }
 
 func extractQueryParams(path string) (url.Values, error) {

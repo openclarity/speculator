@@ -15,19 +15,19 @@
 
 package spec
 
-import oapi_spec "github.com/go-openapi/spec"
+import "github.com/getkin/kin-openapi/openapi3"
 
 type LearningSpec struct {
 	// map parameterized path into path item
-	PathItems           map[string]*oapi_spec.PathItem
-	SecurityDefinitions oapi_spec.SecurityDefinitions
+	PathItems       map[string]*openapi3.PathItem
+	SecuritySchemes openapi3.SecuritySchemes
 }
 
-func (l *LearningSpec) AddPathItem(path string, pathItem *oapi_spec.PathItem) {
+func (l *LearningSpec) AddPathItem(path string, pathItem *openapi3.PathItem) {
 	l.PathItems[path] = pathItem
 }
 
-func (l *LearningSpec) GetPathItem(path string) *oapi_spec.PathItem {
+func (l *LearningSpec) GetPathItem(path string) *openapi3.PathItem {
 	pi, ok := l.PathItems[path]
 	if !ok {
 		return nil

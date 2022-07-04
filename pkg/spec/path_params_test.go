@@ -20,7 +20,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/go-openapi/spec"
+	spec "github.com/getkin/kin-openapi/openapi3"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"gotest.tools/assert"
 )
 
 func Test_createParameterizedPath(t *testing.T) {
@@ -237,53 +239,43 @@ func Test_getParamTypeAndFormat(t *testing.T) {
 		paramsList []string
 	}
 	tests := []struct {
-		name       string
-		args       args
-		wantType   string
-		wantFormat string
+		name string
+		args args
+		want *spec.Schema
 	}{
 		{
 			name: "mixed",
 			args: args{
 				paramsList: []string{"str", "1234", "77e1c83b-7bb0-437b-bc50-a7a58e5660ac"},
 			},
-			wantType:   schemaTypeString,
-			wantFormat: "",
+			want: spec.NewStringSchema(),
 		},
 		{
 			name: "uuid",
 			args: args{
 				paramsList: []string{"77e1c83b-7bb0-437b-bc50-a7a58e5660a3", "77e1c83b-7bb0-437b-bc50-a7a58e5660a8", "77e1c83b-7bb0-437b-bc50-a7a58e5660ac"},
 			},
-			wantType:   schemaTypeString,
-			wantFormat: formatUUID,
+			want: spec.NewUUIDSchema(),
 		},
 		{
 			name: "number",
 			args: args{
 				paramsList: []string{"7776", "78", "123"},
 			},
-			wantType:   schemaTypeInteger,
-			wantFormat: "",
+			want: spec.NewInt64Schema(),
 		},
 		{
 			name: "string",
 			args: args{
 				paramsList: []string{"strone", "strtwo", "strthree"},
 			},
-			wantType:   schemaTypeString,
-			wantFormat: "",
+			want: spec.NewStringSchema(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tpe, format := getParamTypeAndFormat(tt.args.paramsList)
-			if tpe != tt.wantType {
-				t.Errorf("getParamTypeAndFormat() got type = %v, want type %v", tpe, tt.wantType)
-			}
-			if format != tt.wantFormat {
-				t.Errorf("getParamTypeAndFormat() got format = %v, want format %v", format, tt.wantFormat)
-			}
+			schema := getParamSchema(tt.args.paramsList)
+			assert.DeepEqual(t, schema, tt.want, cmpopts.IgnoreUnexported(spec.Schema{}))
 		})
 	}
 }
@@ -291,8 +283,7 @@ func Test_getParamTypeAndFormat(t *testing.T) {
 func Test_createPathParam(t *testing.T) {
 	type args struct {
 		name   string
-		tpe    string
-		format string
+		schema *spec.Schema
 	}
 	tests := []struct {
 		name string
@@ -303,17 +294,16 @@ func Test_createPathParam(t *testing.T) {
 			name: "create",
 			args: args{
 				name:   "param1",
-				tpe:    schemaTypeString,
-				format: formatUUID,
+				schema: spec.NewUUIDSchema(),
 			},
 			want: &PathParam{
-				Parameter: spec.PathParam("param1").Typed(schemaTypeString, formatUUID),
+				Parameter: spec.NewPathParameter("param1").WithSchema(spec.NewUUIDSchema()),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := createPathParam(tt.args.name, tt.args.tpe, tt.args.format); !reflect.DeepEqual(got, tt.want) {
+			if got := createPathParam(tt.args.name, tt.args.schema); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createPathParam() = %v, want %v", got, tt.want)
 			}
 		})

@@ -54,7 +54,7 @@ func getStringFormat(value interface{}) string {
 }
 
 // isDateFormat checks if input is a correctly formatted date with spaces (excluding RFC3339 = "2006-01-02T15:04:05Z07:00")
-// This is useful to identify date string instead of an collection.
+// This is useful to identify date string instead of an array.
 func isDateFormat(input interface{}) bool {
 	asString, ok := input.(string)
 	if !ok {

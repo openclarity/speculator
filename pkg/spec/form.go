@@ -21,8 +21,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/go-openapi/spec"
-	log "github.com/sirupsen/logrus"
+	spec "github.com/getkin/kin-openapi/openapi3"
 )
 
 const (
@@ -30,60 +29,65 @@ const (
 	defaultMaxMemory = 32 << 20 // 32 MB
 )
 
-func addApplicationFormParams(operation *spec.Operation, sd spec.SecurityDefinitions, body string) (*spec.Operation, spec.SecurityDefinitions) {
-	values, err := url.ParseQuery(body)
+func handleApplicationFormURLEncodedBody(operation *spec.Operation, securitySchemes spec.SecuritySchemes, body string) (*spec.Operation, spec.SecuritySchemes, error) {
+	parseQuery, err := url.ParseQuery(body)
 	if err != nil {
-		log.Warnf("failed to parse query. body=%v: %v", body, err)
-		return operation, sd
+		return nil, nil, fmt.Errorf("failed to parse query. body=%v: %v", body, err)
 	}
 
-	for key, values := range values {
+	objSchema := spec.NewObjectSchema()
+
+	for key, values := range parseQuery {
 		if key == AccessTokenParamKey {
-			// Use scheme as security definition name. For OAuth, we should consider checking
-			// supported scopes to allow multiple defs.
-			sdName := OAuth2SecurityDefinitionKey
-
-			if len(values) > 1 {
-				// RFC 6750 does not prohibit multiple tokens, but we do not know whether
-				// they would be AND or OR so we just pick the latest.
-				log.Warnf("Found %v tokens in form parameters, using only the last", len(values))
-				values = values[len(values)-1:]
-			}
-
-			var scheme *spec.SecurityScheme
-			operation, scheme = generateAuthBearerScheme(operation, values[0], sdName)
-			sd = updateSecurityDefinitions(sd, sdName, scheme)
+			// https://datatracker.ietf.org/doc/html/rfc6750#section-2.2
+			operation, securitySchemes = handleAuthQueryParam(operation, securitySchemes, values)
 		} else {
-			operation.AddParam(populateParam(spec.FormDataParam(key), values, true))
+			objSchema.WithProperty(key, getSchemaFromQueryValues(values))
 		}
 	}
 
-	return operation, sd
+	if len(objSchema.Properties) != 0 {
+		operationSetRequestBody(operation, spec.NewRequestBody().WithContent(spec.NewContentWithSchema(objSchema, []string{mediaTypeApplicationForm})))
+		// TODO: handle encoding
+		// https://swagger.io/docs/specification/describing-request-body/
+		// operation.RequestBody.Value.GetMediaType(mediaTypeApplicationForm).Encoding
+	}
+
+	return operation, securitySchemes, nil
 }
 
-func addMultipartFormDataParams(operation *spec.Operation, body string, mediaTypeParams map[string]string) (*spec.Operation, error) {
+func getMultipartFormDataSchema(body string, mediaTypeParams map[string]string) (*spec.Schema, error) {
 	boundary, ok := mediaTypeParams["boundary"]
 	if !ok {
-		return operation, fmt.Errorf("no multipart boundary param in Content-Type")
+		return nil, fmt.Errorf("no multipart boundary param in Content-Type")
 	}
 
 	form, err := multipart.NewReader(strings.NewReader(body), boundary).ReadForm(defaultMaxMemory)
 	if err != nil {
-		return operation, fmt.Errorf("failed to read form: %w", err)
+		return nil, fmt.Errorf("failed to read form: %w", err)
 	}
 
-	// add file formData
-	for key := range form.File {
-		operation.AddParam(spec.FileParam(key))
+	schema := spec.NewObjectSchema()
+
+	// https://swagger.io/docs/specification/describing-request-body/file-upload/
+	for key, fileHeaders := range form.File {
+		fileSchema := spec.NewStringSchema().WithFormat("binary")
+		switch len(fileHeaders) {
+		case 0:
+			// do nothing
+		case 1:
+			// single file
+			schema.WithProperty(key, fileSchema)
+		default:
+			// array of files
+			schema.WithProperty(key, spec.NewArraySchema().WithItems(fileSchema))
+		}
 	}
 
 	// add values formData
 	for key, values := range form.Value {
-		// when using populateParam strings with comma it will be translated to array and it might be wrong
-		// also when the array collection format is ssv the spaces will be URL encoded
-		// for now we will ignore collection
-		operation.AddParam(populateParam(spec.FormDataParam(key), values, false))
+		schema.WithProperty(key, getSchemaFromValues(values, false, ""))
 	}
 
-	return operation, nil
+	return schema, nil
 }

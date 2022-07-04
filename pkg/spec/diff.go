@@ -20,10 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 )
@@ -69,10 +68,10 @@ type DiffParams struct {
 }
 
 func (s *Spec) createDiffParamsFromTelemetry(telemetry *Telemetry) (*DiffParams, error) {
-	securityDefinitions := oapi_spec.SecurityDefinitions{}
+	securitySchemes := oapi_spec.SecuritySchemes{}
 
 	path, _ := GetPathAndQuery(telemetry.Request.Path)
-	telemetryOp, err := s.telemetryToOperation(telemetry, securityDefinitions)
+	telemetryOp, err := s.telemetryToOperation(telemetry, securitySchemes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert telemetry to operation: %w", err)
 	}
@@ -140,12 +139,14 @@ func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathItem *oapi_spec.PathItem
 
-	pathNoBase := trimBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, diffParams.path)
+	basePath := s.ProvidedSpec.GetBasePath()
+
+	pathNoBase := trimBasePathIfNeeded(basePath, diffParams.path)
 
 	pathFromTrie, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
 	if found {
 		// The diff will show the parametrized path if matched and not the telemetry path
-		diffParams.path = addBasePathIfNeeded(s.ProvidedSpec.Spec.BasePath, pathFromTrie)
+		diffParams.path = addBasePathIfNeeded(basePath, pathFromTrie)
 		pathItem = s.ProvidedSpec.GetPathItem(pathFromTrie)
 		if pathID, ok := value.(string); !ok {
 			log.Warnf("value is not a string. %v", value)
@@ -253,29 +254,9 @@ func calculateOperationDiff(specOp, telemetryOp *oapi_spec.Operation, telemetryR
 	clonedSpecOp = sortParameters(clonedSpecOp)
 
 	// Keep only telemetry status code
-	clonedSpecOp, err = keepResponseStatusCode(clonedSpecOp, telemetryResponse.StatusCode)
-	if err != nil {
-		return nil, err
-	}
+	clonedSpecOp = keepResponseStatusCode(clonedSpecOp, telemetryResponse.StatusCode)
 
-	// Check if there is a change in the response, if so, take “produces“ into account. Otherwise don’t include “produces“ in both.
-	hasDiff, err := compareObjects(clonedSpecOp.Responses, clonedTelemetryOp.Responses)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compare responses: %w", err)
-	}
-	if hasDiff {
-		// Found a diff
-		return &operationDiff{
-			OriginalOperation: clonedSpecOp,
-			ModifiedOperation: clonedTelemetryOp,
-		}, nil
-	}
-
-	// No diff in response, don’t include 'Produces' and continue to check for diff in the overall object
-	clonedTelemetryOp.Produces = nil
-	clonedSpecOp.Produces = nil
-
-	hasDiff, err = compareObjects(clonedSpecOp, clonedTelemetryOp)
+	hasDiff, err := compareObjects(clonedSpecOp, clonedTelemetryOp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compare operations: %w", err)
 	}
@@ -306,39 +287,35 @@ func compareObjects(obj1, obj2 interface{}) (hasDiff bool, err error) {
 }
 
 // keepResponseStatusCode will remove all status codes from StatusCodeResponses map except the `statusCodeToKeep`.
-func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) (*oapi_spec.Operation, error) {
-	statusCodeInt, err := strconv.Atoi(statusCodeToKeep)
-	if err != nil {
-		return nil, fmt.Errorf("invalid status code (%+v): %w", statusCodeToKeep, err)
-	}
-
+func keepResponseStatusCode(op *oapi_spec.Operation, statusCodeToKeep string) *oapi_spec.Operation {
 	// keep only the provided status code
 	if op.Responses != nil {
-		for code := range op.Responses.StatusCodeResponses {
-			if code != statusCodeInt {
-				delete(op.Responses.StatusCodeResponses, code)
-			}
+		filteredResponses := make(oapi_spec.Responses)
+		if responseRef, ok := op.Responses[statusCodeToKeep]; ok {
+			filteredResponses[statusCodeToKeep] = responseRef
+		}
+		// keep default if exists
+		if responseRef, ok := op.Responses["default"]; ok {
+			filteredResponses["default"] = responseRef
 		}
 
-		// clear operation Responses if needed
-		if len(op.Responses.StatusCodeResponses) == 0 {
-			if op.Responses.Default == nil {
-				// if no `StatusCodeResponses` and no `Default` response `Responses` can be nil
-				op.Responses = nil
-			} else {
-				// else only `StatusCodeResponses` should be nil
-				op.Responses.StatusCodeResponses = nil
-			}
+		if len(filteredResponses) == 0 {
+			op.Responses = nil
+		} else {
+			op.Responses = filteredResponses
 		}
 	}
 
-	return op, nil
+	return op
 }
 
 func sortParameters(operation *oapi_spec.Operation) *oapi_spec.Operation {
+	if operation == nil {
+		return operation
+	}
 	sort.Slice(operation.Parameters, func(i, j int) bool {
-		right := operation.Parameters[i]
-		left := operation.Parameters[j]
+		right := operation.Parameters[i].Value
+		left := operation.Parameters[j].Value
 		// Sibling parameters must have unique name + in values
 		return right.Name+right.In < left.Name+left.In
 	})

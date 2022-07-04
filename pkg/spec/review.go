@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	oapi_spec "github.com/go-openapi/spec"
+	oapi_spec "github.com/getkin/kin-openapi/openapi3"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/openclarity/speculator/pkg/utils"
@@ -51,7 +51,8 @@ type ReviewPathItem struct {
 	Paths map[string]bool
 }
 
-// this function should group all paths that have suspect parameter (with a certain template), into one path which is parameterized, and then add this path params to the spec.
+// CreateSuggestedReview group all paths that have suspect parameter (with a certain template),
+// into one path which is parameterized, and then add this path params to the spec.
 func (s *Spec) CreateSuggestedReview() *SuggestedSpecReview {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -88,7 +89,7 @@ func (s *Spec) createLearningParametrizedPaths() *LearningParametrizedPaths {
 	return &learningParametrizedPaths
 }
 
-func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
+func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview, version OASVersion) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -123,26 +124,30 @@ func (s *Spec) ApplyApprovedReview(approvedReviews *ApprovedSpecReview) error {
 			log.Warnf("Path was updated, a new path should be created in a normal case. path=%v, uuid=%v", pathItemReview.ParameterizedPath, pathItemReview.PathUUID)
 		}
 
-		// populate SecurityDefinitions from the approved merged path item
-		clonedSpec.ApprovedSpec.SecurityDefinitions = updateSecurityDefinitionsFromPathItem(clonedSpec.ApprovedSpec.SecurityDefinitions, mergedPathItem)
+		// populate SecuritySchemes from the approved merged path item
+		clonedSpec.ApprovedSpec.SecuritySchemes = updateSecuritySchemesFromPathItem(clonedSpec.ApprovedSpec.SecuritySchemes, mergedPathItem)
 	}
 
-	if _, err := clonedSpec.GenerateOASJson(); err != nil {
+	if _, err := clonedSpec.GenerateOASJson(version); err != nil {
 		return fmt.Errorf("failed to generate Open API Spec. %w", err)
 	}
+
+	clonedSpec.ApprovedSpec.SpecVersion = version
+
 	s.SpecInfo = clonedSpec.SpecInfo
+	log.Debugf("Setting approved spec with version %q for %s:%s", s.ApprovedSpec.GetSpecVersion(), s.Host, s.Port)
 
 	return nil
 }
 
-func updateSecurityDefinitionsFromPathItem(sd oapi_spec.SecurityDefinitions, item *oapi_spec.PathItem) oapi_spec.SecurityDefinitions {
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Get)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Put)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Post)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Delete)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Options)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Head)
-	sd = updateSecurityDefinitionsFromOperation(sd, item.Patch)
+func updateSecuritySchemesFromPathItem(sd oapi_spec.SecuritySchemes, item *oapi_spec.PathItem) oapi_spec.SecuritySchemes {
+	sd = updateSecuritySchemesFromOperation(sd, item.Get)
+	sd = updateSecuritySchemesFromOperation(sd, item.Put)
+	sd = updateSecuritySchemesFromOperation(sd, item.Post)
+	sd = updateSecuritySchemesFromOperation(sd, item.Delete)
+	sd = updateSecuritySchemesFromOperation(sd, item.Options)
+	sd = updateSecuritySchemesFromOperation(sd, item.Head)
+	sd = updateSecuritySchemesFromOperation(sd, item.Patch)
 
 	return sd
 }
@@ -153,13 +158,16 @@ func addPathParamsToPathItem(pathItem *oapi_spec.PathItem, suggestedPath string,
 	parts := strings.Split(suggestedPathTrimed, "/")
 
 	for i, part := range parts {
-		if utils.IsPathParam(part) {
-			part = strings.TrimPrefix(part, utils.ParamPrefix)
-			part = strings.TrimSuffix(part, utils.ParamSuffix)
-			paramList := getOnlyIndexedPartFromPaths(paths, i)
-			tpe, format := getParamTypeAndFormat(paramList)
-			paramInfo := createPathParam(part, tpe, format)
-			pathItem.Parameters = append(pathItem.Parameters, *paramInfo.Parameter)
+		if !utils.IsPathParam(part) {
+			continue
 		}
+
+		part = strings.TrimPrefix(part, utils.ParamPrefix)
+		part = strings.TrimSuffix(part, utils.ParamSuffix)
+		paramList := getOnlyIndexedPartFromPaths(paths, i)
+		paramInfo := createPathParam(part, getParamSchema(paramList))
+		pathItem.Parameters = append(pathItem.Parameters, &oapi_spec.ParameterRef{
+			Value: paramInfo.Parameter,
+		})
 	}
 }
