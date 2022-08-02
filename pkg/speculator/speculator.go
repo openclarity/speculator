@@ -17,6 +17,7 @@ package speculator
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -37,6 +38,11 @@ type Speculator struct {
 
 	// config is not exported and is not encoded part of the state
 	config Config
+}
+
+// nolint:gochecknoinits
+func init() {
+	gob.Register(json.RawMessage{})
 }
 
 func CreateSpeculator(config Config) *Speculator {
