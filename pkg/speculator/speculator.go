@@ -17,6 +17,7 @@ package speculator
 
 import (
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -225,6 +226,11 @@ func (s *Speculator) ApplyApprovedReview(specKey SpecKey, approvedReview *_spec.
 		return fmt.Errorf("failed to apply approved review for spec: %v. %w", specKey, err)
 	}
 	return nil
+}
+
+// to solve "failed to encode state: gob: type not registered for interface: json.RawMessage"
+func init() {
+	gob.Register(json.RawMessage(nil))
 }
 
 func (s *Speculator) EncodeState(filePath string) error {
