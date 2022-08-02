@@ -40,6 +40,7 @@ type Speculator struct {
 	config Config
 }
 
+// nolint:gochecknoinits
 func init() {
 	gob.Register(json.RawMessage{})
 }
