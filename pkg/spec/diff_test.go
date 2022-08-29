@@ -667,8 +667,8 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				telemetry: createTelemetry(reqID, http.MethodGet, "/api", "host", "200", Data.ReqBody, Data.RespBody),
 			},
 			want: &APIDiff{
-				Type:   DiffTypeZombieDiff,
-				Path:   "/api",
+				Type: DiffTypeZombieDiff,
+				Path: "/api",
 
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
