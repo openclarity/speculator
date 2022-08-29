@@ -168,7 +168,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: nil,
 				ModifiedPathItem: nil,
 				InteractionID:    reqUUID,
@@ -195,7 +194,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataWithAuth).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -248,7 +246,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -275,7 +272,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -302,7 +298,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/{my-param}",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -330,7 +325,6 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/1",
-				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -350,7 +344,7 @@ func TestSpec_DiffTelemetry_Reconstructed(t *testing.T) {
 				},
 				OpGenerator: CreateTestNewOperationGenerator(),
 			}
-			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceReconstructed)
+			got, err := s.DiffTelemetry(tt.args.telemetry, SpecSourceReconstructed)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DiffTelemetry() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -402,7 +396,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeNoDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: nil,
 				ModifiedPathItem: nil,
 				InteractionID:    reqUUID,
@@ -431,7 +424,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, DataWithAuth).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -488,7 +480,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeShadowDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).WithOperation(http.MethodPost, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -517,7 +508,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -551,7 +541,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/foo/{param}",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -585,7 +574,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/foo/bar",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -619,7 +607,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/{my-param}",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -654,7 +641,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeGeneralDiff,
 				Path:             "/api/1",
-				PathID:           "2",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -683,7 +669,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:   DiffTypeZombieDiff,
 				Path:   "/api",
-				PathID: "1",
 
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Op).PathItem,
@@ -713,7 +698,6 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 			want: &APIDiff{
 				Type:             DiffTypeZombieDiff,
 				Path:             "/api",
-				PathID:           "1",
 				OriginalPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data).Deprecated().Op).PathItem,
 				ModifiedPathItem: &NewTestPathItem().WithOperation(http.MethodGet, NewOperation(t, Data2).Op).PathItem,
 				InteractionID:    reqUUID,
@@ -732,7 +716,7 @@ func TestSpec_DiffTelemetry_Provided(t *testing.T) {
 				},
 				OpGenerator: CreateTestNewOperationGenerator(),
 			}
-			got, err := s.DiffTelemetry(tt.args.telemetry, DiffSourceProvided)
+			got, err := s.DiffTelemetry(tt.args.telemetry, SpecSourceProvided)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DiffTelemetry() error = %v, wantErr %v", err, tt.wantErr)
 				return
