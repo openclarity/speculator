@@ -36,17 +36,9 @@ const (
 	DiffTypeGeneralDiff DiffType = "GENERAL_DIFF"
 )
 
-type DiffSource string
-
-const (
-	DiffSourceReconstructed DiffSource = "RECONSTRUCTED"
-	DiffSourceProvided      DiffSource = "PROVIDED"
-)
-
 type APIDiff struct {
 	Type             DiffType
 	Path             string
-	PathID           string
 	OriginalPathItem *oapi_spec.PathItem
 	ModifiedPathItem *oapi_spec.PathItem
 	InteractionID    uuid.UUID
@@ -62,7 +54,6 @@ type DiffParams struct {
 	operation *oapi_spec.Operation
 	method    string
 	path      string
-	pathID    string
 	requestID string
 	response  *Response
 }
@@ -84,7 +75,7 @@ func (s *Spec) createDiffParamsFromTelemetry(telemetry *Telemetry) (*DiffParams,
 	}, nil
 }
 
-func (s *Spec) DiffTelemetry(telemetry *Telemetry, diffSource DiffSource) (*APIDiff, error) {
+func (s *Spec) DiffTelemetry(telemetry *Telemetry, specSource SpecSource) (*APIDiff, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -95,8 +86,8 @@ func (s *Spec) DiffTelemetry(telemetry *Telemetry, diffSource DiffSource) (*APID
 		return nil, fmt.Errorf("failed to create diff params from telemetry. %w", err)
 	}
 
-	switch diffSource {
-	case DiffSourceProvided:
+	switch specSource {
+	case SpecSourceProvided:
 		if !s.HasProvidedSpec() {
 			log.Infof("No provided spec to diff")
 			return nil, nil
@@ -105,7 +96,7 @@ func (s *Spec) DiffTelemetry(telemetry *Telemetry, diffSource DiffSource) (*APID
 		if err != nil {
 			return nil, fmt.Errorf("failed to diff provided spec. %w", err)
 		}
-	case DiffSourceReconstructed:
+	case SpecSourceReconstructed:
 		if !s.HasApprovedSpec() {
 			log.Infof("No approved spec to diff")
 			return nil, nil
@@ -115,7 +106,7 @@ func (s *Spec) DiffTelemetry(telemetry *Telemetry, diffSource DiffSource) (*APID
 			return nil, fmt.Errorf("failed to diff approved spec. %w", err)
 		}
 	default:
-		return nil, fmt.Errorf("diff source: %v is not valid", diffSource)
+		return nil, fmt.Errorf("spec source: %v is not valid", specSource)
 	}
 
 	return apiDiff, nil
@@ -123,15 +114,10 @@ func (s *Spec) DiffTelemetry(telemetry *Telemetry, diffSource DiffSource) (*APID
 
 func (s *Spec) diffApprovedSpec(diffParams *DiffParams) (*APIDiff, error) {
 	var pathItem *oapi_spec.PathItem
-	pathFromTrie, value, found := s.ApprovedPathTrie.GetPathAndValue(diffParams.path)
+	pathFromTrie, _, found := s.ApprovedPathTrie.GetPathAndValue(diffParams.path)
 	if found {
 		diffParams.path = pathFromTrie // The diff will show the parametrized path if matched and not the telemetry path
 		pathItem = s.ApprovedSpec.GetPathItem(pathFromTrie)
-		if pathID, ok := value.(string); !ok {
-			log.Warnf("value is not a string. %v", value)
-		} else {
-			diffParams.pathID = pathID
-		}
 	}
 	return s.diffPathItem(pathItem, diffParams)
 }
@@ -143,16 +129,11 @@ func (s *Spec) diffProvidedSpec(diffParams *DiffParams) (*APIDiff, error) {
 
 	pathNoBase := trimBasePathIfNeeded(basePath, diffParams.path)
 
-	pathFromTrie, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
+	pathFromTrie, _, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
 	if found {
 		// The diff will show the parametrized path if matched and not the telemetry path
 		diffParams.path = addBasePathIfNeeded(basePath, pathFromTrie)
 		pathItem = s.ProvidedSpec.GetPathItem(pathFromTrie)
-		if pathID, ok := value.(string); !ok {
-			log.Warnf("value is not a string. %v", value)
-		} else {
-			diffParams.pathID = pathID
-		}
 	}
 
 	return s.diffPathItem(pathItem, diffParams)
@@ -186,12 +167,11 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	telemetryOp := diffParams.operation
 	path := diffParams.path
 	requestID := diffParams.requestID
-	pathID := diffParams.pathID
 	reqUUID := uuid.NewV5(uuid.Nil, requestID)
 
 	if pathItem == nil {
 		apiDiff = s.createAPIDiffEvent(DiffTypeShadowDiff, nil, createPathItemFromOperation(method, telemetryOp),
-			reqUUID, path, pathID)
+			reqUUID, path)
 		return apiDiff, nil
 	}
 
@@ -199,7 +179,7 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 	if specOp == nil {
 		// new operation
 		apiDiff := s.createAPIDiffEvent(DiffTypeShadowDiff, pathItem, CopyPathItemWithNewOperation(pathItem, method, telemetryOp),
-			reqUUID, path, pathID)
+			reqUUID, path)
 		return apiDiff, nil
 	}
 
@@ -213,19 +193,18 @@ func (s *Spec) diffPathItem(pathItem *oapi_spec.PathItem, diffParams *DiffParams
 			diffType = DiffTypeZombieDiff
 		}
 		apiDiff := s.createAPIDiffEvent(diffType, createPathItemFromOperation(method, diff.OriginalOperation),
-			createPathItemFromOperation(method, diff.ModifiedOperation), reqUUID, path, pathID)
+			createPathItemFromOperation(method, diff.ModifiedOperation), reqUUID, path)
 		return apiDiff, nil
 	}
 
 	// no diff
-	return s.createAPIDiffEvent(DiffTypeNoDiff, nil, nil, reqUUID, path, pathID), nil
+	return s.createAPIDiffEvent(DiffTypeNoDiff, nil, nil, reqUUID, path), nil
 }
 
-func (s *Spec) createAPIDiffEvent(diffType DiffType, original, modified *oapi_spec.PathItem, interactionID uuid.UUID, path, pathID string) *APIDiff {
+func (s *Spec) createAPIDiffEvent(diffType DiffType, original, modified *oapi_spec.PathItem, interactionID uuid.UUID, path string) *APIDiff {
 	return &APIDiff{
 		Type:             diffType,
 		Path:             path,
-		PathID:           pathID,
 		OriginalPathItem: original,
 		ModifiedPathItem: modified,
 		InteractionID:    interactionID,

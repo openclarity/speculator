@@ -128,7 +128,21 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.Telemetry) error {
 	return nil
 }
 
-func (s *Speculator) DiffTelemetry(telemetry *_spec.Telemetry, diffSource _spec.DiffSource) (*_spec.APIDiff, error) {
+func (s *Speculator) GetPathID(specKey SpecKey, path string, specSource _spec.SpecSource) (string, error) {
+	spec, ok := s.Specs[specKey]
+	if !ok {
+		return "", fmt.Errorf("no spec for key %v", specKey)
+	}
+
+	pathID, err := spec.GetPathID(path, specSource)
+	if err != nil {
+		return "", fmt.Errorf("failed to get path id. specKey=%v, specSource=%v: %v", specKey, specSource, err)
+	}
+
+	return pathID, nil
+}
+
+func (s *Speculator) DiffTelemetry(telemetry *_spec.Telemetry, diffSource _spec.SpecSource) (*_spec.APIDiff, error) {
 	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed get destination info: %v", err)

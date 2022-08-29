@@ -31,6 +31,13 @@ import (
 	"github.com/openclarity/speculator/pkg/utils/errors"
 )
 
+type SpecSource string
+
+const (
+	SpecSourceReconstructed SpecSource = "RECONSTRUCTED"
+	SpecSourceProvided      SpecSource = "PROVIDED"
+)
+
 type Spec struct {
 	SpecInfo
 
@@ -169,6 +176,48 @@ func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	s.LearningSpec.AddPathItem(path, pathItem)
 
 	return nil
+}
+
+func (s *Spec) GetPathID(path string, specSource SpecSource) (string, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	var specID string
+
+	switch specSource {
+	case SpecSourceProvided:
+		if !s.HasProvidedSpec() {
+			log.Infof("No provided spec, path id will be empty")
+			return "", nil
+		}
+		basePath := s.ProvidedSpec.GetBasePath()
+
+		pathNoBase := trimBasePathIfNeeded(basePath, path)
+
+		_, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
+		if found {
+			if pathID, ok := value.(string); !ok {
+				log.Warnf("value is not a string. %v", value)
+			} else {
+				specID = pathID
+			}
+		}
+	case SpecSourceReconstructed:
+		if !s.HasApprovedSpec() {
+			log.Infof("No approved spec. path id will be empty")
+			return "", nil
+		}
+		_, value, found := s.ProvidedPathTrie.GetPathAndValue(path)
+		if found {
+			if pathID, ok := value.(string); !ok {
+				log.Warnf("value is not a string. %v", value)
+			} else {
+				specID = pathID
+			}
+		}
+	default:
+		return "", fmt.Errorf("spec source: %v is not valid", specSource)
+	}
+	return specID, nil
 }
 
 func (s *Spec) GenerateOASYaml(version OASVersion) ([]byte, error) {
