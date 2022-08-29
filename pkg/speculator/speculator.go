@@ -128,18 +128,13 @@ func (s *Speculator) LearnTelemetry(telemetry *_spec.Telemetry) error {
 	return nil
 }
 
-func (s *Speculator) GetPathID(telemetry *_spec.Telemetry, specSource _spec.SpecSource) (string, error) {
-	destInfo, err := GetAddressInfoFromAddress(telemetry.DestinationAddress)
-	if err != nil {
-		return "", fmt.Errorf("failed get destination info: %v", err)
-	}
-	specKey := GetSpecKey(telemetry.Request.Host, destInfo.Port)
+func (s *Speculator) GetPathID(specKey SpecKey, path string, specSource _spec.SpecSource) (string, error) {
 	spec, ok := s.Specs[specKey]
 	if !ok {
 		return "", fmt.Errorf("no spec for key %v", specKey)
 	}
 
-	pathID, err := spec.GetPathID(telemetry, specSource)
+	pathID, err := spec.GetPathID(path, specSource)
 	if err != nil {
 		return "", fmt.Errorf("failed to get path id. specKey=%v, specSource=%v: %v", specKey, specSource, err)
 	}

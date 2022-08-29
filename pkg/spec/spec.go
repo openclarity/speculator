@@ -178,7 +178,7 @@ func (s *Spec) LearnTelemetry(telemetry *Telemetry) error {
 	return nil
 }
 
-func (s *Spec) GetPathID(telemetry *Telemetry, specSource SpecSource) (string, error) {
+func (s *Spec) GetPathID(path string, specSource SpecSource) (string, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	var specID string
@@ -191,7 +191,7 @@ func (s *Spec) GetPathID(telemetry *Telemetry, specSource SpecSource) (string, e
 		}
 		basePath := s.ProvidedSpec.GetBasePath()
 
-		pathNoBase := trimBasePathIfNeeded(basePath, telemetry.Request.Path)
+		pathNoBase := trimBasePathIfNeeded(basePath, path)
 
 		_, value, found := s.ProvidedPathTrie.GetPathAndValue(pathNoBase)
 		if found {
@@ -206,7 +206,7 @@ func (s *Spec) GetPathID(telemetry *Telemetry, specSource SpecSource) (string, e
 			log.Infof("No approved spec. path id will be empty")
 			return "", nil
 		}
-		_, value, found := s.ProvidedPathTrie.GetPathAndValue(telemetry.Request.Path)
+		_, value, found := s.ProvidedPathTrie.GetPathAndValue(path)
 		if found {
 			if pathID, ok := value.(string); !ok {
 				log.Warnf("value is not a string. %v", value)
