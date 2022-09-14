@@ -16,6 +16,7 @@
 package spec
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -308,6 +309,7 @@ func (s *Spec) SpecInfoClone() (*Spec, error) {
 
 func LoadAndValidateRawJSONSpecV3(spec []byte) (*oapi_spec.T, error) {
 	loader := oapi_spec.NewLoader()
+	loader.Context = context.TODO()
 
 	doc, err := loader.LoadFromData(spec)
 	if err != nil {
@@ -323,6 +325,9 @@ func LoadAndValidateRawJSONSpecV3(spec []byte) (*oapi_spec.T, error) {
 }
 
 func LoadAndValidateRawJSONSpecV3FromV2(spec []byte) (*oapi_spec.T, error) {
+	loader := oapi_spec.NewLoader()
+	loader.Context = context.TODO()
+
 	var doc openapi2.T
 	if err := json.Unmarshal(spec, &doc); err != nil {
 		return nil, fmt.Errorf("provided spec is not valid. %w", err)
@@ -333,7 +338,7 @@ func LoadAndValidateRawJSONSpecV3FromV2(spec []byte) (*oapi_spec.T, error) {
 		return nil, fmt.Errorf("conversion to V3 failed. %w", err)
 	}
 
-	err = v3.Validate(oapi_spec.NewLoader().Context)
+	err = v3.Validate(loader.Context)
 	if err != nil {
 		return nil, fmt.Errorf("spec validation failed. %v. %w", err, errors.ErrSpecValidation)
 	}
