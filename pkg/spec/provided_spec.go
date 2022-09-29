@@ -16,6 +16,7 @@
 package spec
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -28,8 +29,8 @@ import (
 
 // Sentinel errors for spec version issues.
 var (
-	ErrUnknownSpecVersion     = fmt.Errorf("unknown spec version")
-	ErrUnsupportedSpecVersion = fmt.Errorf("unsupported spec version")
+	ErrUnknownSpecVersion     = errors.New("unknown spec version")
+	ErrUnsupportedSpecVersion = errors.New("unsupported spec version")
 )
 
 type ProvidedSpec struct {
