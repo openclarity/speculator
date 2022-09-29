@@ -313,7 +313,7 @@ func LoadAndValidateRawJSONSpecV3(spec []byte) (*oapi_spec.T, error) {
 
 	doc, err := loader.LoadFromData(spec)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load data: %s. %v", spec, err)
+		return nil, fmt.Errorf("failed to load data: %s. %w", spec, err)
 	}
 
 	err = doc.Validate(loader.Context)
