@@ -16,6 +16,7 @@
 package spec
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,6 +25,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/openclarity/speculator/pkg/pathtrie"
+)
+
+// Sentinel errors for spec version issues.
+var (
+	ErrUnknownSpecVersion     = errors.New("unknown spec version")
+	ErrUnsupportedSpecVersion = errors.New("unsupported spec version")
 )
 
 type ProvidedSpec struct {
@@ -61,12 +68,12 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 	// this method should be a no-op.
 	jsonSpec, err := yaml.YAMLToJSON(spec)
 	if err != nil {
-		return nil, Unknown, fmt.Errorf("failed to convert provided spec into json: %s. %v", spec, err)
+		return nil, Unknown, fmt.Errorf("failed to convert provided spec into json: %s. %w", spec, err)
 	}
 
 	oasVersion, err := GetJSONSpecVersion(jsonSpec)
 	if err != nil {
-		return nil, Unknown, fmt.Errorf("failed to get spec version: %s. %v", jsonSpec, err)
+		return nil, Unknown, fmt.Errorf("failed to get spec version: %s. %w", jsonSpec, err)
 	}
 
 	var doc *openapi3.T
@@ -81,12 +88,12 @@ func LoadAndValidateRawJSONSpec(spec []byte) (*openapi3.T, OASVersion, error) {
 		log.Debugf("OASv3 spec provided")
 		if doc, err = LoadAndValidateRawJSONSpecV3(jsonSpec); err != nil {
 			log.Errorf("provided spec is not valid OpenAPI 3.0: %s. %v", jsonSpec, err)
-			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %v", err)
+			return nil, Unknown, fmt.Errorf("provided spec is not valid OpenAPI 3.0: %w", err)
 		}
 	case Unknown:
-		return nil, Unknown, fmt.Errorf("unknown spec version (%v)", oasVersion)
+		return nil, Unknown, fmt.Errorf("%w (%v)", ErrUnknownSpecVersion, oasVersion)
 	default:
-		return nil, Unknown, fmt.Errorf("unsupported spec version (%v)", oasVersion)
+		return nil, Unknown, fmt.Errorf("%w (%v)", ErrUnsupportedSpecVersion, oasVersion)
 	}
 
 	return doc, oasVersion, nil
