@@ -204,7 +204,14 @@ func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*s
 	}
 
 	type1, type2 := parameter.Schema.Value.Type, parameter2.Schema.Value.Type
-	if type1 != type2 {
+	switch conflictSolver(type1, type2) {
+	case 0, 1:
+		// do nothing, parameter is used.
+	case 2:
+		// use parameter2.
+		type1 = type2
+		parameter = parameter2
+	case -1:
 		return parameter, []conflict{
 			{
 				path: path,
@@ -250,7 +257,13 @@ func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, 
 		return s, nil
 	}
 
-	if schema.Type != schema2.Type {
+	switch conflictSolver(schema.Type, schema2.Type) {
+	case 0, 1:
+		// do nothing, schema is used.
+	case 2:
+		// use schema2.
+		schema = schema2
+	case -1:
 		return schema, []conflict{
 			{
 				path: path,
@@ -265,7 +278,8 @@ func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, 
 	case spec.TypeBoolean, spec.TypeInteger, spec.TypeNumber:
 		return schema, nil
 	case spec.TypeString:
-		if schema.Format != schema2.Format {
+		// Ignore format only if both schemas are string type and formats are different.
+		if schema.Type == schema2.Type && schema.Format != schema2.Format {
 			schema.Format = ""
 		}
 		return schema, nil
