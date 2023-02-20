@@ -41,26 +41,33 @@ func (c conflict) String() string {
 	return c.msg
 }
 
-// conflictSolver will get 2 types and returns
-// -1 - types conflict can't be resolved
+const (
+	NoConflict = iota
+	PreferType1
+	PreferType2
+	ConflictUnresolved
+)
+
+// conflictSolver will get 2 types and returns:
 //
-//	0 - type1 and type2 are equal
-//	1 - type1 should be used
-//	2 - type2 should be used
+//	NoConflict - type1 and type2 are equal
+//	PreferType1 - type1 should be used
+//	PreferType2 - type2 should be used
+//	ConflictUnresolved - types conflict can't be resolved
 func conflictSolver(type1, type2 string) int {
 	if type1 == type2 {
-		return 0
+		return NoConflict
 	}
 
 	if shouldPreferType(type1, type2) {
-		return 1
+		return PreferType1
 	}
 
 	if shouldPreferType(type2, type1) {
-		return 2 // nolint:gomnd
+		return PreferType2
 	}
 
-	return -1
+	return ConflictUnresolved
 }
 
 // shouldPreferType return true if type1 should be preferred over type2

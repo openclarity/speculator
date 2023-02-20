@@ -53,7 +53,7 @@ func Test_shouldPreferType(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "should not prefer - number",
+			name: "should not prefer - number over object",
 			args: args{
 				t1: spec.TypeNumber,
 				t2: spec.TypeObject,
@@ -101,7 +101,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeNumber,
 				t2: spec.TypeNumber,
 			},
-			want: 0,
+			want: NoConflict,
 		},
 		{
 			name: "prefer string over anything",
@@ -109,7 +109,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeString,
 				t2: spec.TypeNumber,
 			},
-			want: 1,
+			want: PreferType1,
 		},
 		{
 			name: "prefer string over anything",
@@ -117,7 +117,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeInteger,
 				t2: spec.TypeString,
 			},
-			want: 2,
+			want: PreferType2,
 		},
 		{
 			name: "prefer number over int",
@@ -125,7 +125,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeNumber,
 				t2: spec.TypeInteger,
 			},
-			want: 1,
+			want: PreferType1,
 		},
 		{
 			name: "prefer number over int",
@@ -133,7 +133,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeInteger,
 				t2: spec.TypeNumber,
 			},
-			want: 2,
+			want: PreferType2,
 		},
 		{
 			name: "conflict - bool",
@@ -141,7 +141,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeInteger,
 				t2: spec.TypeBoolean,
 			},
-			want: -1,
+			want: ConflictUnresolved,
 		},
 		{
 			name: "conflict - obj",
@@ -149,7 +149,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeObject,
 				t2: spec.TypeBoolean,
 			},
-			want: -1,
+			want: ConflictUnresolved,
 		},
 		{
 			name: "conflict - array",
@@ -157,7 +157,7 @@ func Test_conflictSolver(t *testing.T) {
 				t1: spec.TypeObject,
 				t2: spec.TypeArray,
 			},
-			want: -1,
+			want: ConflictUnresolved,
 		},
 	}
 	for _, tt := range tests {

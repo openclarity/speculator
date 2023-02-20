@@ -205,13 +205,13 @@ func mergeParameter(parameter, parameter2 *spec.Parameter, path *field.Path) (*s
 
 	type1, type2 := parameter.Schema.Value.Type, parameter2.Schema.Value.Type
 	switch conflictSolver(type1, type2) {
-	case 0, 1:
+	case NoConflict, PreferType1:
 		// do nothing, parameter is used.
-	case 2: // nolint:gomnd
+	case PreferType2:
 		// use parameter2.
 		type1 = type2
 		parameter = parameter2
-	case -1:
+	case ConflictUnresolved:
 		return parameter, []conflict{
 			{
 				path: path,
@@ -258,12 +258,12 @@ func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, 
 	}
 
 	switch conflictSolver(schema.Type, schema2.Type) {
-	case 0, 1:
+	case NoConflict, PreferType1:
 		// do nothing, schema is used.
-	case 2: // nolint:gomnd
+	case PreferType2:
 		// use schema2.
 		schema = schema2
-	case -1:
+	case ConflictUnresolved:
 		return schema, []conflict{
 			{
 				path: path,
