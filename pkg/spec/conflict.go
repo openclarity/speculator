@@ -57,7 +57,7 @@ func conflictSolver(type1, type2 string) int {
 	}
 
 	if shouldPreferType(type2, type1) {
-		return 2
+		return 2 // nolint:gomnd
 	}
 
 	return -1
