@@ -70,8 +70,7 @@ func conflictSolver(type1, type2 string) int {
 	return ConflictUnresolved
 }
 
-// shouldPreferType return true if type1 should be preferred over type2
-// Note: MUST be called when type1 and type2 are not identical.
+// shouldPreferType return true if type1 should be preferred over type2.
 func shouldPreferType(type1, type2 string) bool {
 	switch type1 {
 	case spec.TypeBoolean, spec.TypeObject, spec.TypeArray:

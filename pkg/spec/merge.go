@@ -279,7 +279,7 @@ func mergeSchema(schema, schema2 *spec.Schema, path *field.Path) (*spec.Schema, 
 		return schema, nil
 	case spec.TypeString:
 		// Ignore format only if both schemas are string type and formats are different.
-		if schema.Type == schema2.Type && schema.Format != schema2.Format {
+		if schema2.Type == spec.TypeString && schema.Format != schema2.Format {
 			schema.Format = ""
 		}
 		return schema, nil
