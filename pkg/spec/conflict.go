@@ -18,6 +18,7 @@ package spec
 import (
 	"fmt"
 
+	spec "github.com/getkin/kin-openapi/openapi3"
 	"k8s.io/utils/field"
 )
 
@@ -38,4 +39,50 @@ func createHeaderInConflictMsg(path *field.Path, in, in2 interface{}) string {
 
 func (c conflict) String() string {
 	return c.msg
+}
+
+const (
+	NoConflict = iota
+	PreferType1
+	PreferType2
+	ConflictUnresolved
+)
+
+// conflictSolver will get 2 types and returns:
+//
+//	NoConflict - type1 and type2 are equal
+//	PreferType1 - type1 should be used
+//	PreferType2 - type2 should be used
+//	ConflictUnresolved - types conflict can't be resolved
+func conflictSolver(type1, type2 string) int {
+	if type1 == type2 {
+		return NoConflict
+	}
+
+	if shouldPreferType(type1, type2) {
+		return PreferType1
+	}
+
+	if shouldPreferType(type2, type1) {
+		return PreferType2
+	}
+
+	return ConflictUnresolved
+}
+
+// shouldPreferType return true if type1 should be preferred over type2.
+func shouldPreferType(type1, type2 string) bool {
+	switch type1 {
+	case spec.TypeBoolean, spec.TypeObject, spec.TypeArray:
+		// Should not prefer boolean, object and array type over any other type.
+		return false
+	case spec.TypeNumber:
+		// Preferring number to integer type.
+		return type2 == spec.TypeInteger
+	case spec.TypeString:
+		// Preferring string to any type.
+		return true
+	}
+
+	return false
 }

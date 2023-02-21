@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package spec
 
 import (
@@ -412,7 +413,7 @@ func Test_mergeHeader(t *testing.T) {
 			},
 		},
 		{
-			name: "type conflicts",
+			name: "type conflicts prefer string",
 			args: args{
 				header: &spec.Header{
 					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
@@ -425,12 +426,28 @@ func Test_mergeHeader(t *testing.T) {
 			want: &spec.Header{
 				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewStringSchema()),
 			},
+			want1: nil,
+		},
+		{
+			name: "type conflicts",
+			args: args{
+				header: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewInt64Schema()),
+				},
+				header2: &spec.Header{
+					Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewArraySchema()),
+				},
+				child: field.NewPath("test"),
+			},
+			want: &spec.Header{
+				Parameter: *spec.NewHeaderParameter("test").WithSchema(spec.NewInt64Schema()),
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("test"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewInt64Schema(),
 					obj2: spec.NewArraySchema(),
-					msg:  createConflictMsg(field.NewPath("test"), spec.TypeString, spec.TypeArray),
+					msg:  createConflictMsg(field.NewPath("test"), spec.TypeInteger, spec.TypeArray),
 				},
 			},
 		},
@@ -560,7 +577,7 @@ func Test_mergeResponseHeader(t *testing.T) {
 			name: "merge mutual headers with conflicts",
 			args: args{
 				headers: spec.Headers{
-					"test": createHeaderRef(spec.NewStringSchema()),
+					"test": createHeaderRef(spec.NewInt64Schema()),
 				},
 				headers2: spec.Headers{
 					"test": createHeaderRef(spec.NewBoolSchema()),
@@ -568,14 +585,14 @@ func Test_mergeResponseHeader(t *testing.T) {
 				path: field.NewPath("headers"),
 			},
 			want: spec.Headers{
-				"test": createHeaderRef(spec.NewStringSchema()),
+				"test": createHeaderRef(spec.NewInt64Schema()),
 			},
 			want1: []conflict{
 				{
 					path: field.NewPath("headers").Child("test"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewInt64Schema(),
 					obj2: spec.NewBoolSchema(),
-					msg:  createConflictMsg(field.NewPath("headers").Child("test"), spec.TypeString, spec.TypeBoolean),
+					msg:  createConflictMsg(field.NewPath("headers").Child("test"), spec.TypeInteger, spec.TypeBoolean),
 				},
 			},
 		},
@@ -684,33 +701,49 @@ func Test_mergeResponse(t *testing.T) {
 			want1: nil,
 		},
 		{
+			name: "merge response header and schema prefer number",
+			args: args{
+				response: createTestResponse().
+					WithJSONSchema(spec.NewFloat64Schema()).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+				response2: createTestResponse().
+					WithJSONSchema(spec.NewInt64Schema()).
+					WithHeader("X-Header", spec.NewBoolSchema()).Response,
+				path: field.NewPath("200"),
+			},
+			want: createTestResponse().
+				WithJSONSchema(spec.NewFloat64Schema()).
+				WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+			want1: nil,
+		},
+		{
 			name: "merge response header and schema with conflicts",
 			args: args{
 				response: createTestResponse().
 					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
-					WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+					WithHeader("X-Header", spec.NewFloat64Schema()).Response,
 				response2: createTestResponse().
-					WithJSONSchema(spec.NewStringSchema()).
+					WithJSONSchema(spec.NewInt64Schema()).
 					WithHeader("X-Header", spec.NewBoolSchema()).Response,
 				path: field.NewPath("200"),
 			},
 			want: createTestResponse().
 				WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
-				WithHeader("X-Header", spec.NewUUIDSchema()).Response,
+				WithHeader("X-Header", spec.NewFloat64Schema()).Response,
 			want1: []conflict{
 				{
 					path: field.NewPath("200").Child("content").Child("application/json"),
 					obj1: spec.NewArraySchema().WithItems(spec.NewStringSchema()),
-					obj2: spec.NewStringSchema(),
+					obj2: spec.NewInt64Schema(),
 					msg: createConflictMsg(field.NewPath("200").Child("content").Child("application/json"),
-						spec.TypeArray, spec.TypeString),
+						spec.TypeArray, spec.TypeInteger),
 				},
 				{
 					path: field.NewPath("200").Child("headers").Child("X-Header"),
-					obj1: spec.NewUUIDSchema(),
+					obj1: spec.NewFloat64Schema(),
 					obj2: spec.NewBoolSchema(),
 					msg: createConflictMsg(field.NewPath("200").Child("headers").Child("X-Header"),
-						spec.TypeString, spec.TypeBoolean),
+						spec.TypeNumber, spec.TypeBoolean),
 				},
 			},
 		},
@@ -853,7 +886,7 @@ func Test_mergeResponses(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "mutual and non mutual response code responses with conflicts",
+			name: "mutual and non mutual response code responses solve conflicts",
 			args: args{
 				responses: createTestResponses().
 					WithResponse("200", createTestResponse().
@@ -865,6 +898,37 @@ func Test_mergeResponses(t *testing.T) {
 				responses2: createTestResponses().
 					WithResponse("200", createTestResponse().
 						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("202", createTestResponse().
+						WithJSONSchema(spec.NewBoolSchema()).
+						WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
+				path: field.NewPath("responses"),
+			},
+			want: createTestResponses().
+				WithResponse("200", createTestResponse().
+					WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())).
+					WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+				WithResponse("201", createTestResponse().
+					WithJSONSchema(spec.NewDateTimeSchema()).
+					WithHeader("X-Header1", spec.NewUUIDSchema()).Response).
+				WithResponse("202", createTestResponse().
+					WithJSONSchema(spec.NewBoolSchema()).
+					WithHeader("X-Header3", spec.NewUUIDSchema()).Response).Responses,
+			want1: nil,
+		},
+		{
+			name: "mutual and non mutual response code responses with conflicts",
+			args: args{
+				responses: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()))).
+						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
+					WithResponse("201", createTestResponse().
+						WithJSONSchema(spec.NewDateTimeSchema()).
+						WithHeader("X-Header1", spec.NewUUIDSchema()).Response).Responses,
+				responses2: createTestResponses().
+					WithResponse("200", createTestResponse().
+						WithJSONSchema(spec.NewArraySchema().WithItems(spec.NewFloat64Schema())).
 						WithHeader("X-Header", spec.NewUUIDSchema()).Response).
 					WithResponse("202", createTestResponse().
 						WithJSONSchema(spec.NewBoolSchema()).
@@ -886,9 +950,9 @@ func Test_mergeResponses(t *testing.T) {
 					path: field.NewPath("responses").Child("200").Child("content").
 						Child("application/json").Child("items"),
 					obj1: spec.NewArraySchema().WithItems(spec.NewDateTimeSchema()),
-					obj2: spec.NewStringSchema(),
+					obj2: spec.NewFloat64Schema(),
 					msg: createConflictMsg(field.NewPath("responses").Child("200").Child("content").
-						Child("application/json").Child("items"), spec.TypeArray, spec.TypeString),
+						Child("application/json").Child("items"), spec.TypeArray, spec.TypeNumber),
 				},
 			},
 		},
@@ -1262,10 +1326,20 @@ func Test_mergeSchema(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "array conflict",
+			name: "array conflict prefer number",
 			args: args{
 				schema:  spec.NewArraySchema().WithItems(spec.NewInt64Schema()),
 				schema2: spec.NewArraySchema().WithItems(spec.NewFloat64Schema()),
+				path:    field.NewPath("schema"),
+			},
+			want:  spec.NewArraySchema().WithItems(spec.NewFloat64Schema()),
+			want1: nil,
+		},
+		{
+			name: "array conflict",
+			args: args{
+				schema:  spec.NewArraySchema().WithItems(spec.NewInt64Schema()),
+				schema2: spec.NewArraySchema().WithItems(spec.NewObjectSchema()),
 				path:    field.NewPath("schema"),
 			},
 			want: spec.NewArraySchema().WithItems(spec.NewInt64Schema()),
@@ -1273,8 +1347,8 @@ func Test_mergeSchema(t *testing.T) {
 				{
 					path: field.NewPath("schema").Child("items"),
 					obj1: spec.NewInt64Schema(),
-					obj2: spec.NewFloat64Schema(),
-					msg:  createConflictMsg(field.NewPath("schema").Child("items"), spec.TypeInteger, spec.TypeNumber),
+					obj2: spec.NewObjectSchema(),
+					msg:  createConflictMsg(field.NewPath("schema").Child("items"), spec.TypeInteger, spec.TypeObject),
 				},
 			},
 		},
@@ -1283,23 +1357,26 @@ func Test_mergeSchema(t *testing.T) {
 			args: args{
 				schema: spec.NewObjectSchema().
 					WithProperty("bool", spec.NewBoolSchema()).
-					WithProperty("conflict", spec.NewStringSchema()),
+					WithProperty("conflict prefer string", spec.NewBoolSchema()).
+					WithProperty("conflict", spec.NewObjectSchema()),
 				schema2: spec.NewObjectSchema().
 					WithProperty("float", spec.NewFloat64Schema()).
+					WithProperty("conflict prefer string", spec.NewStringSchema()).
 					WithProperty("conflict", spec.NewInt64Schema()),
 				path: field.NewPath("schema"),
 			},
 			want: spec.NewObjectSchema().
 				WithProperty("bool", spec.NewBoolSchema()).
-				WithProperty("conflict", spec.NewStringSchema()).
+				WithProperty("conflict prefer string", spec.NewStringSchema()).
+				WithProperty("conflict", spec.NewObjectSchema()).
 				WithProperty("float", spec.NewFloat64Schema()),
 			want1: []conflict{
 				{
 					path: field.NewPath("schema").Child("properties").Child("conflict"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewObjectSchema(),
 					obj2: spec.NewInt64Schema(),
 					msg: createConflictMsg(field.NewPath("schema").Child("properties").Child("conflict"),
-						spec.TypeString, spec.TypeInteger),
+						spec.TypeObject, spec.TypeInteger),
 				},
 			},
 		},
@@ -1330,19 +1407,29 @@ func Test_mergeParameter(t *testing.T) {
 		want1 []conflict
 	}{
 		{
-			name: "param type conflict",
+			name: "param type solve conflict",
 			args: args{
 				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
 				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewBoolSchema()),
 				path:       field.NewPath("param-name"),
 			},
-			want: spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+			want:  spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+			want1: nil,
+		},
+		{
+			name: "param type conflict",
+			args: args{
+				parameter:  spec.NewHeaderParameter("header").WithSchema(spec.NewInt64Schema()),
+				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewBoolSchema()),
+				path:       field.NewPath("param-name"),
+			},
+			want: spec.NewHeaderParameter("header").WithSchema(spec.NewInt64Schema()),
 			want1: []conflict{
 				{
 					path: field.NewPath("param-name"),
-					obj1: spec.NewHeaderParameter("header").WithSchema(spec.NewStringSchema()),
+					obj1: spec.NewHeaderParameter("header").WithSchema(spec.NewInt64Schema()),
 					obj2: spec.NewHeaderParameter("header").WithSchema(spec.NewBoolSchema()),
-					msg:  createConflictMsg(field.NewPath("param-name"), spec.TypeString, spec.TypeBoolean),
+					msg:  createConflictMsg(field.NewPath("param-name"), spec.TypeInteger, spec.TypeBoolean),
 				},
 			},
 		},
@@ -1363,15 +1450,8 @@ func Test_mergeParameter(t *testing.T) {
 				parameter2: spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewBoolSchema())),
 				path:       field.NewPath("param-name"),
 			},
-			want: spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())),
-			want1: []conflict{
-				{
-					path: field.NewPath("param-name").Child("items"),
-					obj1: spec.NewStringSchema(),
-					obj2: spec.NewBoolSchema(),
-					msg:  createConflictMsg(field.NewPath("param-name").Child("items"), spec.TypeString, spec.TypeBoolean),
-				},
-			},
+			want:  spec.NewHeaderParameter("header").WithSchema(spec.NewArraySchema().WithItems(spec.NewStringSchema())),
+			want1: nil,
 		},
 		{
 			name: "object merge",
@@ -1516,7 +1596,7 @@ func Test_mergeParametersByInType(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "mutual and non mutual parameters with conflicts",
+			name: "mutual and non mutual parameters solve conflicts",
 			args: args{
 				parameters: spec.Parameters{
 					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
@@ -1533,12 +1613,32 @@ func Test_mergeParametersByInType(t *testing.T) {
 				{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
 				{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
 			},
+			want1: nil,
+		},
+		{
+			name: "mutual and non mutual parameters with conflicts",
+			args: args{
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewInt64Schema())},
+					{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
+				},
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
+					{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
+				},
+				path: field.NewPath("parameters"),
+			},
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewInt64Schema())},
+				{Value: spec.NewHeaderParameter("X-Header-2").WithSchema(spec.NewBoolSchema())},
+				{Value: spec.NewHeaderParameter("X-Header-3").WithSchema(spec.NewInt64Schema())},
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("parameters").Child("X-Header-1"),
-					obj1: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema()),
+					obj1: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewInt64Schema()),
 					obj2: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema()),
-					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), spec.TypeString,
+					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), spec.TypeInteger,
 						spec.TypeBoolean),
 				},
 			},
@@ -1718,7 +1818,7 @@ func Test_mergeParameters(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "mutual and non mutual parameters with conflicts",
+			name: "mutual and non mutual parameters solve conflicts",
 			args: args{
 				parameters: spec.Parameters{
 					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
@@ -1731,6 +1831,40 @@ func Test_mergeParameters(t *testing.T) {
 				parameters2: spec.Parameters{
 					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
 					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+						WithProperty("str", spec.NewDateTimeSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
+				},
+				path: field.NewPath("parameters"),
+			},
+			want: spec.Parameters{
+				{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema())},
+				{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+					WithProperty("str", spec.NewDateTimeSchema()).
+					WithProperty("bool", spec.NewBoolSchema()))},
+				{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
+				{Value: spec.NewCookieParameter("non-mutual-4").WithSchema(spec.NewStringSchema())},
+			},
+			want1: nil,
+		},
+		{
+			name: "mutual and non mutual parameters with conflicts",
+			args: args{
+				parameters: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewInt64Schema())},
+					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
+						WithProperty("bool", spec.NewBoolSchema()))},
+					{Value: spec.NewPathParameter("non-mutual-1").WithSchema(spec.NewStringSchema())},
+					{Value: spec.NewCookieParameter("non-mutual-2").WithSchema(spec.NewStringSchema())},
+				},
+				parameters2: spec.Parameters{
+					{Value: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewInt64Schema())},
+					{Value: spec.NewQueryParameter("query-1").WithSchema(spec.NewBoolSchema())},
 					{Value: spec.NewHeaderParameter("header").WithSchema(spec.NewObjectSchema().
 						WithProperty("str", spec.NewDateTimeSchema()))},
 					{Value: spec.NewPathParameter("non-mutual-3").WithSchema(spec.NewStringSchema())},
@@ -1753,16 +1887,16 @@ func Test_mergeParameters(t *testing.T) {
 				{
 					path: field.NewPath("parameters").Child("X-Header-1"),
 					obj1: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewBoolSchema()),
-					obj2: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewUUIDSchema()),
+					obj2: spec.NewHeaderParameter("X-Header-1").WithSchema(spec.NewInt64Schema()),
 					msg: createConflictMsg(field.NewPath("parameters").Child("X-Header-1"), spec.TypeBoolean,
-						spec.TypeString),
+						spec.TypeInteger),
 				},
 				{
 					path: field.NewPath("parameters").Child("query-1"),
 					obj1: spec.NewQueryParameter("query-1").WithSchema(spec.NewInt64Schema()),
-					obj2: spec.NewQueryParameter("query-1").WithSchema(spec.NewUUIDSchema()),
+					obj2: spec.NewQueryParameter("query-1").WithSchema(spec.NewBoolSchema()),
 					msg: createConflictMsg(field.NewPath("parameters").Child("query-1"), spec.TypeInteger,
-						spec.TypeString),
+						spec.TypeBoolean),
 				},
 			},
 		},
@@ -2128,7 +2262,7 @@ func Test_mergeRequestBody(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "non mutual contents with conflicts",
+			name: "non mutual contents solve conflicts",
 			args: args{
 				body: &spec.RequestBodyRef{
 					Value: spec.NewRequestBody().
@@ -2144,13 +2278,32 @@ func Test_mergeRequestBody(t *testing.T) {
 				Value: spec.NewRequestBody().
 					WithSchema(spec.NewStringSchema(), []string{"application/xml"}),
 			},
+			want1: nil,
+		},
+		{
+			name: "non mutual contents with conflicts",
+			args: args{
+				body: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().
+						WithSchema(spec.NewBoolSchema(), []string{"application/xml"}),
+				},
+				body2: &spec.RequestBodyRef{
+					Value: spec.NewRequestBody().
+						WithSchema(spec.NewInt64Schema(), []string{"application/xml"}),
+				},
+				path: field.NewPath("requestBody"),
+			},
+			want: &spec.RequestBodyRef{
+				Value: spec.NewRequestBody().
+					WithSchema(spec.NewBoolSchema(), []string{"application/xml"}),
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("requestBody").Child("content").Child("application/xml"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewBoolSchema(),
 					obj2: spec.NewInt64Schema(),
 					msg: createConflictMsg(field.NewPath("requestBody").Child("content").Child("application/xml"),
-						spec.TypeString, spec.TypeInteger),
+						spec.TypeBoolean, spec.TypeInteger),
 				},
 			},
 		},
@@ -2270,7 +2423,7 @@ func Test_mergeContent(t *testing.T) {
 			want1: nil,
 		},
 		{
-			name: "mutual contents with conflicts",
+			name: "mutual contents solve conflicts",
 			args: args{
 				content: spec.Content{
 					"xml": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
@@ -2283,12 +2436,28 @@ func Test_mergeContent(t *testing.T) {
 			want: spec.Content{
 				"xml": spec.NewMediaType().WithSchema(spec.NewStringSchema()),
 			},
+			want1: nil,
+		},
+		{
+			name: "mutual contents with conflicts",
+			args: args{
+				content: spec.Content{
+					"xml": spec.NewMediaType().WithSchema(spec.NewBoolSchema()),
+				},
+				content2: spec.Content{
+					"xml": spec.NewMediaType().WithSchema(spec.NewInt64Schema()),
+				},
+				path: field.NewPath("start"),
+			},
+			want: spec.Content{
+				"xml": spec.NewMediaType().WithSchema(spec.NewBoolSchema()),
+			},
 			want1: []conflict{
 				{
 					path: field.NewPath("start").Child("xml"),
-					obj1: spec.NewStringSchema(),
+					obj1: spec.NewBoolSchema(),
 					obj2: spec.NewInt64Schema(),
-					msg:  createConflictMsg(field.NewPath("start").Child("xml"), spec.TypeString, spec.TypeInteger),
+					msg:  createConflictMsg(field.NewPath("start").Child("xml"), spec.TypeBoolean, spec.TypeInteger),
 				},
 			},
 		},
