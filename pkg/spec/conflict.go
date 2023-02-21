@@ -74,6 +74,7 @@ func conflictSolver(type1, type2 string) int {
 func shouldPreferType(type1, type2 string) bool {
 	switch type1 {
 	case spec.TypeBoolean, spec.TypeObject, spec.TypeArray:
+		// Should not prefer boolean, object and array type over any other type.
 		return false
 	case spec.TypeNumber:
 		// Preferring number to integer type.
