@@ -18,6 +18,7 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -132,7 +133,8 @@ func generateDefNameFromPropNames(propNames []string) string {
 	// generate name based on properties names when 'defNameHint' is missing
 	// sort the slice to get more stable test results
 	sort.Strings(propNames)
-	return strings.Join(propNames, "_")
+	propString := strings.Join(propNames, "_")
+	return regexp.MustCompile(`[^a-zA-Z0-9._-]+`).ReplaceAllString(propString, "")
 }
 
 func getUniqueSchemeName(schemes spec.Schemas, name string) string {
