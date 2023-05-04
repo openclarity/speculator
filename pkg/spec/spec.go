@@ -209,7 +209,10 @@ func (s *Spec) GetPathID(path string, specSource SpecSource) (string, error) {
 		}
 		log.Infof("********* %+v %+v", s.ApprovedPathTrie, s.ApprovedPathTrie.Trie)
 		for k, v := range s.ApprovedPathTrie.Trie {
-			log.Infof("************* %+v -> %+v", k, v)
+			log.Infof("************* %v -> %+v", k, v)
+			for kk, vv := range v.Children {
+				log.Infof("***************** %v -> %+v", kk, vv)
+			}
 		}
 		_, value, found := s.ApprovedPathTrie.GetPathAndValue(path)
 		if found {
