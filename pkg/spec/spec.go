@@ -207,7 +207,7 @@ func (s *Spec) GetPathID(path string, specSource SpecSource) (string, error) {
 			log.Infof("No approved spec. path id will be empty")
 			return "", nil
 		}
-		_, value, found := s.ProvidedPathTrie.GetPathAndValue(path)
+		_, value, found := s.ApprovedPathTrie.GetPathAndValue(path)
 		if found {
 			if pathID, ok := value.(string); !ok {
 				log.Warnf("value is not a string. %v", value)
